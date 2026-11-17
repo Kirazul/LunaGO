@@ -4,7 +4,7 @@
 // English with no link back. The site has three separate root layouts (see src/app), and for
 // that structure Next.js only offers an experimental way to customise it, so this script simply
 // replaces the file with a small self-contained page in both languages. Its links include the
-// base path ("/ComplainLens" on GitHub Pages, empty locally), like every other link of the site.
+// base path ("/LunaGO" on GitHub Pages, empty locally), like every other link of the site.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 

@@ -576,7 +576,7 @@ RAG appears in three places only. In each, a model without retrieval fails in a 
 
 | Piece | Free host | Notes |
 |---|---|---|
-| Website + console | **GitHub Pages** (Next.js static export, workflow `pages.yml`) | https://kirazul.github.io/ComplainLens/ ; no server needed: every page is static and talks to the API |
+| Website + console | **GitHub Pages** (Next.js static export, workflow `pages.yml`) | https://kirazul.github.io/LunaGO/ ; no server needed: every page is static and talks to the API |
 | API + models | **Railway** (Docker, 1 GB RAM, sleeps when idle) | https://api-production-a4e30.up.railway.app ; the multilingual embedding model is loaded in int8 to fit 1 GB (§5.6) |
 | Database | **SQLite** on a Railway volume (500 MB) | Enough for the demo; Postgres works by changing `DATABASE_URL` |
 | Email | **AgentMail** | Receives and replies over HTTPS, free plan (100 emails a day) |

@@ -19,9 +19,9 @@ nobody is impersonated; the models are trained and evaluated on real, public sup
 
 | | |
 |---|---|
-| Portal (start here: two buttons) | https://kirazul.github.io/ComplainLens/ |
-| LunaGo customer site (EN/FR) | https://kirazul.github.io/ComplainLens/en/ |
-| ComplaintLens console (staff) | https://kirazul.github.io/ComplainLens/console/ |
+| Portal (start here: two buttons) | https://kirazul.github.io/LunaGO/ |
+| LunaGo customer site (EN/FR) | https://kirazul.github.io/LunaGO/en/ |
+| ComplaintLens console (staff) | https://kirazul.github.io/LunaGO/console/ |
 | API (interactive docs) | https://api-production-a4e30.up.railway.app/docs |
 
 Send a message from any channel and watch it appear in the console within seconds. The API sleeps
@@ -33,7 +33,7 @@ when idle to stay within the free plan, so the first request after a pause takes
 | Contact form | customer site, "Contact" (optional ride ID) | the ticket's tracking page |
 | Live chat | customer site, "Live support" | the chat itself; the conversation continues there |
 | Ride rating | customer site, "Rate a ride" (stars + comment) | the ticket's tracking page |
-| Community forum | [GitHub Discussions](https://github.com/Kirazul/ComplainLens/discussions) of this repository | a comment in the thread |
+| Community forum | [GitHub Discussions](https://github.com/Kirazul/LunaGO/discussions) of this repository | a comment in the thread |
 
 ## How it works
 
