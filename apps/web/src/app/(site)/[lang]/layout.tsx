@@ -8,7 +8,7 @@ import { LunaGoLogo } from "@/components/brand";
 import { AccountButton } from "@/components/site/account";
 import { ChatWidget } from "@/components/site/chat-widget";
 import { LangSwitch } from "@/components/site/lang-switch";
-import { FORUM_URL } from "@/lib/api";
+import { FORUM_URL } from "@/lib/config";
 import { dict, isLang, LANGS } from "@/lib/i18n";
 import "../../globals.css";
 
@@ -24,6 +24,8 @@ export function generateStaticParams() {
   return LANGS.map((lang) => ({ lang }));
 }
 
+// Root layout of the LunaGo website (one of three, with (root) and (console)): <html lang> follows
+// the language in the address, and every page gets the header, the footer and the chat.
 export default async function SiteLayout({ children, params }: LayoutProps<"/[lang]">) {
   const { lang } = await params;
   if (!isLang(lang)) notFound();
@@ -34,7 +36,7 @@ export default async function SiteLayout({ children, params }: LayoutProps<"/[la
       <body className="flex min-h-screen flex-col bg-paper font-body text-slate">
         <header className="bg-night text-paper">
           {/* Phones: logo and account on the first row, links below. Desktop: one row. */}
-          <nav aria-label="Main" className="mx-auto grid max-w-6xl grid-cols-[1fr_auto] items-center gap-x-8 gap-y-3 px-5 py-4 md:flex">
+          <nav aria-label={t.nav.label} className="mx-auto grid max-w-6xl grid-cols-[1fr_auto] items-center gap-x-8 gap-y-3 px-5 py-4 md:flex">
             <Link href={`/${lang}`} aria-label="LunaGo" className="md:mr-auto">
               <LunaGoLogo />
             </Link>

@@ -6,7 +6,11 @@ import { RequireAccount } from "@/components/site/account";
 import { YourRides } from "@/components/site/your-rides";
 import { dict, isLang } from "@/lib/i18n";
 
-export const metadata: Metadata = { title: "Your rides", robots: { index: false } };
+// The browser tab's title, in the page's language.
+export async function generateMetadata({ params }: PageProps<"/[lang]/rides">): Promise<Metadata> {
+  const { lang } = await params;
+  return { title: isLang(lang) ? dict(lang).rides.title : undefined, robots: { index: false } };
+}
 
 export default async function RidesPage({ params }: PageProps<"/[lang]/rides">) {
   const { lang } = await params;

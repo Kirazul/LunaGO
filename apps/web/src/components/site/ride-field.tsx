@@ -2,21 +2,15 @@
 
 import { useEffect, useState } from "react";
 
-import { api, type Account, type Lang, type Ride } from "@/lib/api";
+import { FIELD } from "@/components/site/field";
+import { api } from "@/lib/api";
 import { dateTime } from "@/lib/format";
-import type { Dict } from "@/lib/i18n";
-
-export const RIDE_ID = /^LG-\d{4,6}$/;
-
-/** Normalise what a customer types ("lg 12345", "LG12345") to "LG-12345". */
-export function normaliseRideId(value: string): string {
-  const digits = value.replace(/^\s*lg[\s-]*/i, "").trim();
-  return value.trim() ? `LG-${digits}` : "";
-}
+import type { Dict, Lang } from "@/lib/i18n";
+import type { Account, Ride } from "@/lib/types";
 
 // Which ride a message is about: a list of the customer's rides when signed in, an optional ride
 // ID box otherwise. The value is submitted as the form field "ride".
-export function RideField({ me, lang, t, field }: { me: Account | null | undefined; lang: Lang; t: Dict["contact"]; field: string }) {
+export function RideField({ me, lang, t }: { me: Account | null | undefined; lang: Lang; t: Dict["contact"] }) {
   const [rides, setRides] = useState<Ride[]>([]);
   useEffect(() => {
     if (me) api.myRides().then(setRides).catch(() => setRides([]));
@@ -26,7 +20,7 @@ export function RideField({ me, lang, t, field }: { me: Account | null | undefin
     return (
       <label className="block">
         <span className="font-semibold text-night">{t.ride}</span>
-        <select name="ride" defaultValue="" className={field}>
+        <select name="ride" defaultValue="" className={FIELD}>
           <option value="">{t.rideNone}</option>
           {rides.map((r) => (
             <option key={r.id} value={r.id}>
@@ -39,7 +33,7 @@ export function RideField({ me, lang, t, field }: { me: Account | null | undefin
   return (
     <label className="block">
       <span className="font-semibold text-night">{t.rideId}</span>
-      <input name="ride" placeholder={t.rideIdPlaceholder} autoCapitalize="characters" className={field} />
+      <input name="ride" placeholder={t.rideIdPlaceholder} autoCapitalize="characters" className={FIELD} />
     </label>
   );
 }

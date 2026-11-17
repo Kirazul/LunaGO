@@ -12,6 +12,8 @@ export interface LiveEvent {
 
 // Subscribe to the API's live events; reconnects after a drop (the API may be waking up).
 export function useEvents(onEvent: (event: LiveEvent) => void): boolean {
+  // The caller passes a new function on every render. Kept in a ref, the connection below always
+  // calls the latest one without being closed and reopened each time.
   const handler = useRef(onEvent);
   const [connected, setConnected] = useState(false);
   useEffect(() => {

@@ -5,7 +5,11 @@ import { Suspense } from "react";
 import { RateForm } from "@/components/site/rate-form";
 import { dict, isLang } from "@/lib/i18n";
 
-export const metadata: Metadata = { title: "Rate a ride" };
+// The browser tab's title, in the page's language.
+export async function generateMetadata({ params }: PageProps<"/[lang]/rate">): Promise<Metadata> {
+  const { lang } = await params;
+  return { title: isLang(lang) ? dict(lang).rate.title : undefined };
+}
 
 export default async function RatePage({ params }: PageProps<"/[lang]/rate">) {
   const { lang } = await params;

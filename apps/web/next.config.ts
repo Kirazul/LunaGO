@@ -8,7 +8,7 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const nextConfig: NextConfig = {
   output: "export",
   basePath: basePath || undefined,
-  trailingSlash: true, // /en/help/ -> /en/help/index.html, which GitHub Pages serves directly
+  trailingSlash: true, // /en/book/ -> /en/book/index.html, which GitHub Pages serves directly
   images: { unoptimized: true },
   turbopack: {
     rules: {

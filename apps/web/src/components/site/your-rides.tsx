@@ -5,9 +5,13 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAccount } from "@/components/site/account";
-import { api, type Lang, type MyConversation, type Ride } from "@/lib/api";
+import { api } from "@/lib/api";
 import { dateTime, money } from "@/lib/format";
-import type { Dict } from "@/lib/i18n";
+import type { Dict, Lang } from "@/lib/i18n";
+import type { MyConversation, Ride } from "@/lib/types";
+
+// The signed-in customer's rides and conversations (Your rides). Each ride shows its ID, driver and
+// charges, and can open the chat about that ride; a ride that has not started can be cancelled.
 
 const STATE_STYLE: Record<Ride["state"], string> = {
   scheduled: "bg-lilac/40 text-night",
@@ -23,14 +27,22 @@ export function YourRides({ lang, t }: { lang: Lang; t: Dict }) {
   const [tab, setTab] = useState<"rides" | "messages">("rides");
   const [rides, setRides] = useState<Ride[] | null>(null);
   const [messages, setMessages] = useState<MyConversation[] | null>(null);
-  const [version, setVersion] = useState(0);
+  const [offline, setOffline] = useState(false); // the last refresh did not reach the server
+  const [cancelFailed, setCancelFailed] = useState(false);
+  const [version, setVersion] = useState(0); // bumped to load the lists again
 
   // Rides change state with the clock (scheduled, on the way, completed): refresh every 30 s.
   useEffect(() => {
     if (!me) return;
     let active = true;
-    api.myRides().then((r) => active && setRides(r)).catch(() => undefined);
-    api.myConversations().then((m) => active && setMessages(m)).catch(() => undefined);
+    Promise.all([api.myRides(), api.myConversations()])
+      .then(([r, m]) => {
+        if (!active) return;
+        setRides(r);
+        setMessages(m);
+        setOffline(false);
+      })
+      .catch(() => active && setOffline(true));
     const timer = setTimeout(() => setVersion((v) => v + 1), 30_000);
     return () => {
       active = false;
@@ -39,7 +51,12 @@ export function YourRides({ lang, t }: { lang: Lang; t: Dict }) {
   }, [me, version]);
 
   async function cancel(id: string) {
-    await api.cancelRide(id).catch(() => undefined);
+    setCancelFailed(false);
+    try {
+      await api.cancelRide(id);
+    } catch {
+      setCancelFailed(true);
+    }
     setVersion((v) => v + 1);
   }
 
@@ -47,6 +64,8 @@ export function YourRides({ lang, t }: { lang: Lang; t: Dict }) {
     ["rides", t.rides.tabRides, rides?.length],
     ["messages", t.rides.tabMessages, messages?.length],
   ] as const;
+  const problem = cancelFailed ? t.rides.cancelError : offline ? t.rides.offline : null;
+  const loading = !offline && (tab === "rides" ? !rides : !messages);
   return (
     <div>
       {booked && (
@@ -54,36 +73,47 @@ export function YourRides({ lang, t }: { lang: Lang; t: Dict }) {
           {t.book.booked}
         </p>
       )}
-      <div role="tablist" className="flex gap-2">
-        {tabs.map(([id, label, count]) => (
-          <button
-            key={id}
-            role="tab"
-            type="button"
-            aria-selected={tab === id}
-            onClick={() => setTab(id)}
-            className={`rounded-full px-5 py-2 font-semibold ${tab === id ? "bg-night text-paper" : "bg-white text-night ring-1 ring-lilac hover:ring-night"}`}
-          >
-            {label}
-            {count != null && <span className="ml-2 opacity-70">{count}</span>}
-          </button>
-        ))}
+      <div className="flex gap-2">
+        <div role="group" aria-label={t.rides.show} className="flex gap-2">
+          {tabs.map(([id, label, count]) => (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={tab === id}
+              onClick={() => setTab(id)}
+              className={`rounded-full px-5 py-2 font-semibold ${tab === id ? "bg-night text-paper" : "bg-white text-night ring-1 ring-lilac hover:ring-night"}`}
+            >
+              {label}
+              {count != null && <span className="ml-2 opacity-70">{count}</span>}
+            </button>
+          ))}
+        </div>
         <Link href={`/${lang}/book`} className="ml-auto rounded-full bg-amber px-5 py-2 font-semibold text-night hover:bg-night hover:text-paper">
           {t.nav.book}
         </Link>
       </div>
 
-      {tab === "rides" ? (
+      {problem && (
+        <p role="alert" className="mt-6 rounded-xl bg-amber/15 px-4 py-3 text-night">
+          {problem}
+        </p>
+      )}
+      {loading && (
+        <p role="status" className="mt-6 text-slate">
+          {t.rides.loading}
+        </p>
+      )}
+
+      {tab === "rides" && rides && (
         <ul className="mt-6 space-y-4">
-          {rides?.length === 0 && <li className="text-slate">{t.rides.empty}</li>}
-          {!rides && <li className="text-slate">…</li>}
-          {rides?.map((r) => (
+          {rides.length === 0 && <li className="text-slate">{t.rides.empty}</li>}
+          {rides.map((r) => (
             <li key={r.id} className="rounded-3xl bg-white p-5 ring-1 ring-lilac sm:p-6">
               <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-xl font-bold text-night">
                     {r.pickup} <span aria-hidden className="text-amber-deep">→</span>
-                    <span className="sr-only"> to </span> {r.dropoff}
+                    <span className="sr-only"> {t.rides.to} </span> {r.dropoff}
                   </p>
                   <p className="mt-1 text-slate">{dateTime(r.started_at, lang)}</p>
                 </div>
@@ -140,10 +170,11 @@ export function YourRides({ lang, t }: { lang: Lang; t: Dict }) {
             </li>
           ))}
         </ul>
-      ) : (
+      )}
+      {tab === "messages" && messages && (
         <ul className="mt-6 divide-y divide-lilac/60 overflow-hidden rounded-3xl bg-white ring-1 ring-lilac">
-          {messages?.length === 0 && <li className="px-6 py-5 text-slate">{t.rides.noMessages}</li>}
-          {messages?.map((m) => (
+          {messages.length === 0 && <li className="px-6 py-5 text-slate">{t.rides.noMessages}</li>}
+          {messages.map((m) => (
             <li key={m.id}>
               <Link
                 href={`/${lang}/track/?id=${m.id}&k=${encodeURIComponent(m.key)}`}

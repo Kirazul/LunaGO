@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { useAccount } from "@/components/site/account";
-import { normaliseRideId, RIDE_ID, RideField } from "@/components/site/ride-field";
-import { api, ApiError, type Lang } from "@/lib/api";
-import type { Dict } from "@/lib/i18n";
+import { FIELD } from "@/components/site/field";
+import { RideField } from "@/components/site/ride-field";
+import { api, ApiError } from "@/lib/api";
+import type { Dict, Lang } from "@/lib/i18n";
+import { normaliseRideId, RIDE_ID } from "@/lib/ride-id";
 
 export function ContactForm({ lang, t }: { lang: Lang; t: Dict["contact"] }) {
   const router = useRouter();
@@ -34,32 +36,32 @@ export function ContactForm({ lang, t }: { lang: Lang; t: Dict["contact"] }) {
       });
       router.push(`/${lang}/track/?id=${ticket.id}&k=${encodeURIComponent(ticket.track_key)}`);
     } catch (err) {
-      setError(err instanceof ApiError && err.status === 429 ? t.errorBusy : t.errorNetwork);
+      const status = err instanceof ApiError ? err.status : 0;
+      setError(status === 429 ? t.errorBusy : status === 422 ? t.errorEmail : t.errorNetwork);
       setSending(false);
     }
   }
 
-  const field = "mt-2 w-full rounded-xl border border-lilac bg-white px-4 py-3 text-night placeholder:text-slate/50 focus:border-night";
   return (
     <form onSubmit={onSubmit} className="space-y-6" noValidate>
       {!me && (
         <div className="grid gap-6 sm:grid-cols-2">
           <label className="block">
             <span className="font-semibold text-night">{t.name}</span>
-            <input name="name" autoComplete="name" placeholder={t.namePlaceholder} className={field} />
+            <input name="name" autoComplete="name" placeholder={t.namePlaceholder} className={FIELD} />
           </label>
           <label className="block">
             <span className="font-semibold text-night">{t.email}</span>
-            <input name="email" type="email" required autoComplete="email" className={field} />
+            <input name="email" type="email" required autoComplete="email" className={FIELD} />
           </label>
         </div>
       )}
       <div className="max-w-md">
-        <RideField me={me} lang={lang} t={t} field={field} />
+        <RideField me={me} lang={lang} t={t} />
       </div>
       <label className="block">
         <span className="font-semibold text-night">{t.message}</span>
-        <textarea name="body" required rows={7} maxLength={5000} className={`${field} resize-y`} />
+        <textarea name="body" required rows={7} maxLength={5000} className={`${FIELD} resize-y`} />
       </label>
       {error && (
         <p role="alert" className="rounded-xl bg-amber/15 px-4 py-3 text-night">

@@ -5,8 +5,8 @@ import { useMemo } from "react";
 
 import { Moon } from "@/components/moon";
 import { Messages, ReplyBox, useConversation } from "@/components/site/conversation";
-import type { Lang } from "@/lib/api";
-import type { Dict } from "@/lib/i18n";
+import { dateOnly } from "@/lib/format";
+import type { Dict, Lang } from "@/lib/i18n";
 
 // A customer's conversation as a page: where it stands, every message, and a reply box.
 function TrackView({ id, trackKey, lang, t }: { id: number; trackKey: string; lang: Lang; t: Dict }) {
@@ -27,9 +27,6 @@ function TrackView({ id, trackKey, lang, t }: { id: number; trackKey: string; la
       no_reply: t.track.noReply,
       closed: t.track.closed,
     }[ticket.status as string] ?? t.phases.answered;
-  const date = new Intl.DateTimeFormat(lang === "fr" ? "fr-CA" : "en-CA", { dateStyle: "medium" }).format(
-    new Date(ticket.received_at),
-  );
 
   return (
     <div>
@@ -37,7 +34,7 @@ function TrackView({ id, trackKey, lang, t }: { id: number; trackKey: string; la
         <Moon phase={done} size={72} title={`${done}/4`} />
         <div>
           <p className="text-lilac">
-            {t.track.ticket} {ticket.number} · {date}
+            {t.track.ticket} {ticket.number} · {dateOnly(ticket.received_at, lang)}
           </p>
           <p className="mt-1 font-display text-2xl font-bold sm:text-3xl" aria-live="polite">
             {state}

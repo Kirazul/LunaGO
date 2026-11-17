@@ -4,10 +4,14 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { ContactForm } from "@/components/site/contact-form";
-import { FORUM_URL, SUPPORT_EMAIL } from "@/lib/api";
+import { FORUM_URL, SUPPORT_EMAIL } from "@/lib/config";
 import { dict, isLang } from "@/lib/i18n";
 
-export const metadata: Metadata = { title: "Contact" };
+// The browser tab's title, in the page's language.
+export async function generateMetadata({ params }: PageProps<"/[lang]/contact">): Promise<Metadata> {
+  const { lang } = await params;
+  return { title: isLang(lang) ? dict(lang).contact.title : undefined };
+}
 
 export default async function ContactPage({ params }: PageProps<"/[lang]/contact">) {
   const { lang } = await params;

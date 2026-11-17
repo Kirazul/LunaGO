@@ -1,16 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useEffectEvent, useId, useRef, useState, type FormEvent } from "react";
 
 import { Moon } from "@/components/moon";
 import { useAccount } from "@/components/site/account";
-import { Messages, ReplyBox, useConversation, type ConversationRef } from "@/components/site/conversation";
-import { api, ApiError, type Account, type Lang, type Ride } from "@/lib/api";
+import { Messages, ReplyBox, sendOnEnter, useConversation, type ConversationRef } from "@/components/site/conversation";
+import { api, ApiError } from "@/lib/api";
 import { dateTime } from "@/lib/format";
-import type { Dict } from "@/lib/i18n";
+import type { Dict, Lang } from "@/lib/i18n";
 import { remember, useRemembered } from "@/lib/storage";
+import type { Account, Ride } from "@/lib/types";
 
 // Remembered in this browser only, so a conversation continues after a reload or on another page.
 const EMAIL_KEY = "lunago.chat.email";
@@ -20,15 +21,34 @@ const CONVERSATION_KEY = "lunago.chat.conversation";
 export function ChatWidget({ lang, t }: { lang: Lang; t: Dict }) {
   const c = t.chat;
   const query = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   // Opened by the visitor, or by a link anywhere on the site (?chat=open).
   const requested = query.get("chat") === "open";
   const [lastRequested, setLastRequested] = useState(requested);
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
+  // A link has just asked for the chat: it wins over the visitor's earlier choice. (State is
+  // updated while rendering, which React allows for "reset when an input changes"; an effect
+  // would show one wrong frame first.)
   if (requested !== lastRequested) {
     setLastRequested(requested);
-    setUserOpen(null);
+    if (requested) setUserOpen(null);
   }
   const open = userOpen ?? requested;
+
+  // ?chat and ?ride are one-shot instructions: once acted on they leave the address, so a reload
+  // does not repeat them (and wipe the conversation), and the same link works again later.
+  function dropFromAddress(...names: string[]) {
+    const rest = new URLSearchParams(query);
+    names.forEach((name) => rest.delete(name));
+    const left = rest.toString();
+    router.replace(left ? `${pathname}?${left}` : pathname, { scroll: false });
+  }
+
+  function close() {
+    setUserOpen(false);
+    if (requested) dropFromAddress("chat");
+  }
   // "Get help with this ride" (Your rides) opens a new conversation about that ride.
   const ride = query.get("ride");
   const me = useAccount();
@@ -47,13 +67,16 @@ export function ChatWidget({ lang, t }: { lang: Lang; t: Dict }) {
     if (live.missing) remember(CONVERSATION_KEY, null);
   }, [live.missing]);
 
+  // Escape closes the chat. An "effect event" always sees the latest `close` without making the
+  // key listener re-subscribe on every render.
+  const onEscape = useEffectEvent(() => {
+    close();
+    launcher.current?.focus();
+  });
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setUserOpen(false);
-        launcher.current?.focus();
-      }
+      if (e.key === "Escape") onEscape();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -62,6 +85,8 @@ export function ChatWidget({ lang, t }: { lang: Lang; t: Dict }) {
   function started(next: ConversationRef, address: string) {
     remember(EMAIL_KEY, address);
     remember(CONVERSATION_KEY, next);
+    setUserOpen(true); // stay open once the address no longer says ?chat=open
+    if (requested || ride) dropFromAddress("chat", "ride");
   }
 
   const restart = () => remember(CONVERSATION_KEY, null);
@@ -73,7 +98,7 @@ export function ChatWidget({ lang, t }: { lang: Lang; t: Dict }) {
       <button
         ref={launcher}
         type="button"
-        onClick={() => setUserOpen(!open)}
+        onClick={() => (open ? close() : setUserOpen(true))}
         aria-expanded={open}
         aria-controls={panelId}
         className="fixed bottom-4 right-4 z-40 flex items-center gap-2.5 rounded-full bg-night p-3 font-semibold text-paper shadow-[0_10px_30px_-10px_rgba(30,27,75,0.7)] ring-1 ring-lilac/30 hover:bg-night-soft sm:bottom-5 sm:right-5 sm:py-2.5 sm:pl-3 sm:pr-5"
@@ -227,12 +252,7 @@ function StartForm({ email, me, ride, lang, t, onStarted }: StartProps) {
           maxLength={5000}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              e.currentTarget.form?.requestSubmit();
-            }
-          }}
+          onKeyDown={sendOnEnter}
           placeholder={c.placeholder}
           className="w-full resize-none rounded-xl border border-lilac px-3 py-2 text-night placeholder:text-slate/50 focus:border-night"
         />

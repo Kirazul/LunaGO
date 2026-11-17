@@ -3,8 +3,11 @@
 import { useEffect, useState, type FormEvent } from "react";
 
 import { useSession } from "@/components/console/shell";
-import { api, type Member } from "@/lib/api";
+import { api } from "@/lib/api";
+import type { Member } from "@/lib/types";
 
+// Team (administrators only): who can sign in to the console. Add a member, reset a password,
+// remove a member.
 export default function TeamPage() {
   const current = useSession();
   const [members, setMembers] = useState<Member[] | null>(null);

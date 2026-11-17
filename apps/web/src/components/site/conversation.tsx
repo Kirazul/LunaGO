@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 
-import { api, ApiError, type PublicTicket } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import type { Dict } from "@/lib/i18n";
+import type { PublicTicket } from "@/lib/types";
 
 /** What a browser needs to follow a conversation: its ID and secret tracking key. */
 export interface ConversationRef {
@@ -18,7 +19,10 @@ const IDLE_LIMIT = 30 * 60_000; // stop polling after 30 quiet minutes (the serv
 
 /** Follows a conversation while `active`, and sends the customer's next messages. */
 export function useConversation(ref: ConversationRef | null, active = true) {
-  const [data, setData] = useState<PublicTicket | null>(null);
+  // Kept with the conversation it belongs to: after "New chat", the previous conversation must
+  // not show while the new one loads.
+  const [loaded, setLoaded] = useState<{ id: number; ticket: PublicTicket } | null>(null);
+  const data = ref && loaded?.id === ref.id ? loaded.ticket : null;
   const [missing, setMissing] = useState(false);
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState<"busy" | "network" | null>(null);
@@ -34,7 +38,7 @@ export function useConversation(ref: ConversationRef | null, active = true) {
       try {
         const next = await api.publicTicket(ref.id, ref.key);
         if (stop) return;
-        setData(next);
+        setLoaded({ id: ref.id, ticket: next });
         setMissing(false);
         const writing = next.status === "processing";
         if (writing) lastActivity.current = Date.now();
@@ -59,7 +63,12 @@ export function useConversation(ref: ConversationRef | null, active = true) {
     try {
       await api.followUp(ref.id, ref.key, body);
       // Shown at once; the next poll brings the server's copy.
-      setData((d) => (d ? { ...d, status: "processing", messages: [...d.messages, { from: "customer", body, at: new Date().toISOString() }] } : d));
+      const mine = { from: "customer" as const, body, at: new Date().toISOString() };
+      setLoaded((d) =>
+        d && d.id === ref.id
+          ? { id: d.id, ticket: { ...d.ticket, status: "processing", messages: [...d.ticket.messages, mine] } }
+          : d,
+      );
       setNudge((n) => n + 1);
       return true;
     } catch (err) {
@@ -114,6 +123,14 @@ export function Messages({ data, t, size = "compact" }: { data: PublicTicket; t:
   );
 }
 
+/** In a message box, Enter sends the form and Shift+Enter starts a new line. */
+export function sendOnEnter(e: KeyboardEvent<HTMLTextAreaElement>) {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    e.currentTarget.form?.requestSubmit();
+  }
+}
+
 export function ReplyBox({
   onSend,
   sending,
@@ -145,12 +162,7 @@ export function ReplyBox({
             maxLength={5000}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                e.currentTarget.form?.requestSubmit();
-              }
-            }}
+            onKeyDown={sendOnEnter}
             placeholder={t.placeholder}
             className="field-sizing-content max-h-40 min-h-11 w-full resize-none rounded-2xl border border-lilac bg-white px-4 py-2.5 text-night placeholder:text-slate/50 focus:border-night"
           />

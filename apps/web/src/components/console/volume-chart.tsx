@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import type { Insights } from "@/lib/api";
+import type { Insights } from "@/lib/types";
 
 // Daily message volume with incident days emphasised (emphasis form: one accent hue, the rest in
 // a recessive gray). Palette: accent = reference slot 1 (#2a78d6); gray is de-emphasis, below 3:1

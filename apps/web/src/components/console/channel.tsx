@@ -1,4 +1,4 @@
-import type { Channel } from "@/lib/api";
+import type { Channel } from "@/lib/types";
 
 // Where a message came from. Icons are drawn on a 16px grid with a 1.5px stroke so they read at
 // table size; the label is always shown next to the icon (an icon alone is a guessing game).
@@ -24,10 +24,6 @@ const CHANNELS: Record<Channel, { label: string; path: string }> = {
     path: "M2.5 3h7.5v5H5.5L3.5 9.5V8h-1z M10 6h3.5v5h-1v1.5L10.5 11H7V8",
   },
 };
-
-export function channelLabel(channel: string): string {
-  return CHANNELS[channel as Channel]?.label ?? channel;
-}
 
 export function ChannelMark({ channel, showLabel = true }: { channel: string; showLabel?: boolean }) {
   const c = CHANNELS[channel as Channel];

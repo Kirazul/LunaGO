@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 
-import type { Lang } from "@/lib/api";
+import type { Lang } from "@/lib/i18n";
 
 // Switch language while staying on the same page (and keeping a tracking key, if any).
 export function LangSwitch({ current, label }: { current: Lang; label: string }) {

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* Design tokens. Two identities share one stylesheet:
-   - LunaGo (public site): "Plateau at night", night indigo, moon paper, streetlamp amber.
+   - LunaGo (public site): "a city at night": night indigo, moon paper, streetlamp amber.
    - ComplaintLens (console): a calm analytical desk where colour encodes the decision. */
 @theme {
   --color-night: #1e1b4b;

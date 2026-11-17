@@ -2,7 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 
-import { api, ApiError, session } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
+import { session } from "@/lib/session";
 
 export default function AccountPage() {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);

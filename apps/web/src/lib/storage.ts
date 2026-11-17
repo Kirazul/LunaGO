@@ -7,13 +7,19 @@ import { useSyncExternalStore } from "react";
 
 const listeners = new Set<() => void>();
 const parsed = new Map<string, { raw: string | null; value: unknown }>();
+// Values the browser refused to store (private mode, storage full): kept until the tab is closed.
+const unsaved = new Map<string, string | null>();
 
-function read<T>(key: string): T | null {
+export function recall<T>(key: string): T | null {
   let raw: string | null = null;
-  try {
-    raw = window.localStorage.getItem(key);
-  } catch {
-    // storage unavailable (private mode): nothing remembered
+  if (unsaved.has(key)) {
+    raw = unsaved.get(key) ?? null;
+  } else {
+    try {
+      raw = window.localStorage.getItem(key);
+    } catch {
+      // storage unavailable (private mode): nothing remembered
+    }
   }
   const hit = parsed.get(key);
   if (hit && hit.raw === raw) return hit.value as T | null; // same snapshot, same object
@@ -28,16 +34,18 @@ function read<T>(key: string): T | null {
 }
 
 export function remember(key: string, value: unknown) {
+  const raw = value == null ? null : JSON.stringify(value);
   try {
-    if (value == null) window.localStorage.removeItem(key);
-    else window.localStorage.setItem(key, JSON.stringify(value));
+    if (raw === null) window.localStorage.removeItem(key);
+    else window.localStorage.setItem(key, raw);
+    unsaved.delete(key);
   } catch {
-    // not remembered: fine
+    unsaved.set(key, raw); // not stored: remembered for this tab only
   }
   listeners.forEach((listener) => listener());
 }
 
-function subscribe(listener: () => void) {
+export function subscribe(listener: () => void) {
   listeners.add(listener);
   window.addEventListener("storage", listener); // other tabs
   return () => {
@@ -49,7 +57,7 @@ function subscribe(listener: () => void) {
 export function useRemembered<T>(key: string): T | null {
   return useSyncExternalStore(
     subscribe,
-    () => read<T>(key),
+    () => recall<T>(key),
     () => null,
   );
 }

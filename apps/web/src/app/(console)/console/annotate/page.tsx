@@ -3,8 +3,13 @@
 import { useCallback, useEffect, useState, type KeyboardEvent } from "react";
 
 import { useSession } from "@/components/console/shell";
-import { humanize } from "@/components/console/status";
-import { api, type Agreement, type AnnotationItem, type AnnotationProgress, type GoldLabels } from "@/lib/api";
+import { api } from "@/lib/api";
+import { humanize } from "@/lib/format";
+import type { Agreement, AnnotationItem, AnnotationProgress, GoldLabels } from "@/lib/types";
+
+// Annotate: staff label messages by hand, one at a time. These labels are the reference answers
+// (the gold sets) the models are scored against. The pilot set is labelled by two people; how
+// often they agree is shown beside the form.
 
 // Field values mirror eval/annotation_guidelines.md (and the backend's Labels model).
 const TYPES = ["complaint", "request", "feedback", "praise", "spam_or_irrelevant"];
@@ -74,7 +79,7 @@ export default function AnnotatePage() {
         setError(null);
       })
       .catch((e: Error) => active && setError(e.message));
-    api.agreement(setName === "gold_fr" ? "gold_fr" : setName).then((a) => active && setAgreement(a)).catch(() => undefined);
+    api.agreement(setName).then((a) => active && setAgreement(a)).catch(() => undefined);
     return () => {
       active = false;
     };
@@ -239,7 +244,7 @@ export default function AnnotatePage() {
             <p className="mt-1 text-sm text-muted">
               No licensed French complaint data exists, so the French gold set is written by the team. Use invented details only.
             </p>
-            <textarea value={frText} onChange={(e) => setFrText(e.target.value)} rows={4}
+            <textarea aria-label="French message" value={frText} onChange={(e) => setFrText(e.target.value)} rows={4}
               className="mt-2 w-full rounded-lg border border-line px-3 py-2 text-sm"
               placeholder="Ex. : Le chauffeur a pris un détour et j'ai payé 12 $ de plus." />
             <button type="button" disabled={frText.trim().length < 2}

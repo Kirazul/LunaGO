@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { useAccount } from "@/components/site/account";
-import { api, type Lang, type Quote } from "@/lib/api";
+import { api } from "@/lib/api";
 import { money } from "@/lib/format";
-import type { Dict } from "@/lib/i18n";
+import type { Dict, Lang } from "@/lib/i18n";
+import type { Quote } from "@/lib/types";
 
 // Local "YYYY-MM-DDTHH:mm" for <input type="datetime-local">.
 function localInput(date: Date): string {
@@ -29,8 +30,8 @@ export function BookingForm({ lang, t, tone = "light" }: { lang: Lang; t: Dict["
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.places().then(setPlaces).catch(() => setPlaces([]));
-  }, []);
+    api.places().then(setPlaces).catch(() => setError(t.offline));
+  }, [t.offline]);
 
   const key = `${pickup}>${dropoff}`;
   const ready = Boolean(pickup && dropoff && pickup !== dropoff);
@@ -99,7 +100,7 @@ export function BookingForm({ lang, t, tone = "light" }: { lang: Lang; t: Dict["
           {[false, true].map((isLater) => (
             <label
               key={String(isLater)}
-              className={`cursor-pointer rounded-full px-4 py-2 text-sm font-semibold ring-1 has-[:checked]:bg-amber has-[:checked]:text-night has-[:checked]:ring-amber ${
+              className={`cursor-pointer rounded-full px-4 py-2 text-sm font-semibold ring-1 has-[:checked]:bg-amber has-[:checked]:text-night has-[:checked]:ring-amber has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-amber ${
                 dark ? "text-paper ring-lilac/40" : "bg-white text-night ring-lilac"
               }`}
             >

@@ -5,7 +5,11 @@ import { Suspense } from "react";
 import { BookingForm } from "@/components/site/booking-form";
 import { dict, isLang } from "@/lib/i18n";
 
-export const metadata: Metadata = { title: "Book a ride" };
+// The browser tab's title, in the page's language.
+export async function generateMetadata({ params }: PageProps<"/[lang]/book">): Promise<Metadata> {
+  const { lang } = await params;
+  return { title: isLang(lang) ? dict(lang).book.title : undefined };
+}
 
 export default async function BookPage({ params }: PageProps<"/[lang]/book">) {
   const { lang } = await params;

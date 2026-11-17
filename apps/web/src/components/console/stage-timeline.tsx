@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react";
 
-import { humanize } from "@/components/console/status";
-import type { StageRecord } from "@/lib/api";
+import { formatMs, humanize } from "@/lib/format";
+import type { StageRecord } from "@/lib/types";
 
 const TITLES: Record<string, string> = {
   normalize: "Clean the message",
@@ -195,8 +195,4 @@ export function StageTimeline({ stages, processing }: { stages: StageRecord[]; p
       ))}
     </ol>
   );
-}
-
-export function formatMs(ms: number): string {
-  return ms >= 1000 ? `${(ms / 1000).toFixed(2)} s` : `${ms.toFixed(ms < 10 ? 2 : 0)} ms`;
 }

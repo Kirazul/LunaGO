@@ -1,7 +1,6 @@
 // LunaGo website copy, English and French. Short, plain words, written for the rider.
 
-import type { Lang } from "./api";
-
+export type Lang = "en" | "fr";
 export const LANGS: Lang[] = ["en", "fr"];
 
 export function isLang(value: string): value is Lang {
@@ -10,6 +9,7 @@ export function isLang(value: string): value is Lang {
 
 const en = {
   nav: {
+    label: "Main",
     book: "Book a ride",
     rides: "Your rides",
     contact: "Contact",
@@ -47,6 +47,7 @@ const en = {
     signInFirst: "Sign in to book",
     booked: "Booked. Your ride is in Your rides.",
     error: "The ride could not be booked. Try again.",
+    offline: "Booking is not available right now. Try again in a few seconds.",
   },
   account: {
     signInTitle: "Sign in",
@@ -62,14 +63,18 @@ const en = {
     wrong: "Wrong email or password.",
     exists: "An account already uses this email. Sign in instead.",
     weak: "The password needs at least 8 characters.",
+    badEmail: "Enter a valid email address.",
     busy: "Too many attempts. Try again in 15 minutes.",
     network: "The server is not reachable. Try again in a few seconds.",
     demo: "Demo company: new accounts come with a few past rides.",
   },
   rides: {
     title: "Your rides",
+    show: "Show",
     tabRides: "Rides",
     tabMessages: "Messages",
+    loading: "Loading…",
+    offline: "The server is not reachable right now. This page will try again in a moment.",
     empty: "No rides yet.",
     noMessages: "No messages yet.",
     state: { scheduled: "Scheduled", in_progress: "On the way", completed: "Completed", cancelled: "Cancelled" },
@@ -80,6 +85,8 @@ const en = {
     upfront: "Upfront price",
     getHelp: "Get help with this ride",
     cancel: "Cancel ride",
+    cancelError: "The ride could not be cancelled. Try again.",
+    to: "to",
     signInTitle: "Sign in to see your rides",
     open: "Open",
   },
@@ -98,6 +105,7 @@ const en = {
     sending: "Sending…",
     errorEmpty: "Write a message and an email address so we can reply.",
     errorRide: "A ride ID looks like LG-12345.",
+    errorEmail: "Enter a valid email address so we can reply.",
     errorNetwork: "The message could not be sent. Check your connection and try again.",
     errorBusy: "Too many messages from this connection. Try again in an hour.",
     other: "Other ways to reach us",
@@ -163,6 +171,7 @@ type Dict = typeof en;
 
 const fr: Dict = {
   nav: {
+    label: "Principale",
     book: "Commander une course",
     rides: "Vos courses",
     contact: "Contact",
@@ -200,6 +209,7 @@ const fr: Dict = {
     signInFirst: "Connectez-vous pour commander",
     booked: "C'est réservé. Votre course est dans Vos courses.",
     error: "La course n'a pas pu être commandée. Réessayez.",
+    offline: "La commande n'est pas disponible pour le moment. Réessayez dans quelques secondes.",
   },
   account: {
     signInTitle: "Se connecter",
@@ -215,14 +225,18 @@ const fr: Dict = {
     wrong: "Courriel ou mot de passe incorrect.",
     exists: "Un compte utilise déjà ce courriel. Connectez-vous.",
     weak: "Le mot de passe doit contenir au moins 8 caractères.",
+    badEmail: "Entrez une adresse courriel valide.",
     busy: "Trop de tentatives. Réessayez dans 15 minutes.",
     network: "Le serveur ne répond pas. Réessayez dans quelques secondes.",
     demo: "Entreprise de démonstration : les nouveaux comptes ont déjà quelques courses passées.",
   },
   rides: {
     title: "Vos courses",
+    show: "Afficher",
     tabRides: "Courses",
     tabMessages: "Messages",
+    loading: "Chargement…",
+    offline: "Le serveur ne répond pas pour le moment. Cette page réessaiera dans un instant.",
     empty: "Aucune course pour l'instant.",
     noMessages: "Aucun message pour l'instant.",
     state: { scheduled: "Prévue", in_progress: "En route", completed: "Terminée", cancelled: "Annulée" },
@@ -233,6 +247,8 @@ const fr: Dict = {
     upfront: "Prix fixé d'avance",
     getHelp: "Obtenir de l'aide pour cette course",
     cancel: "Annuler la course",
+    cancelError: "La course n'a pas pu être annulée. Réessayez.",
+    to: "vers",
     signInTitle: "Connectez-vous pour voir vos courses",
     open: "Ouvrir",
   },
@@ -251,6 +267,7 @@ const fr: Dict = {
     sending: "Envoi…",
     errorEmpty: "Écrivez un message et une adresse courriel pour que nous puissions répondre.",
     errorRide: "Un numéro de course ressemble à LG-12345.",
+    errorEmail: "Entrez une adresse courriel valide pour que nous puissions répondre.",
     errorNetwork: "Le message n'a pas pu être envoyé. Vérifiez votre connexion et réessayez.",
     errorBusy: "Trop de messages depuis cette connexion. Réessayez dans une heure.",
     other: "Autres façons de nous joindre",

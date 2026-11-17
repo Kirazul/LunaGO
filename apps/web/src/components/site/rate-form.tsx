@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { useAccount } from "@/components/site/account";
-import { normaliseRideId, RIDE_ID, RideField } from "@/components/site/ride-field";
-import { api, ApiError, type Lang } from "@/lib/api";
-import type { Dict } from "@/lib/i18n";
+import { FIELD } from "@/components/site/field";
+import { RideField } from "@/components/site/ride-field";
+import { api, ApiError } from "@/lib/api";
+import type { Dict, Lang } from "@/lib/i18n";
+import { normaliseRideId, RIDE_ID } from "@/lib/ride-id";
 
 // A ride rating, as in the app: stars and a comment. It enters the pipeline as channel "review";
 // the rating travels in the subject, so the classifier reads it with the comment.
@@ -40,17 +42,17 @@ export function RateForm({ lang, t, contact }: { lang: Lang; t: Dict["rate"]; co
       });
       router.push(`/${lang}/track/?id=${ticket.id}&k=${encodeURIComponent(ticket.track_key)}`);
     } catch (err) {
-      setError(err instanceof ApiError && err.status === 429 ? contact.errorBusy : contact.errorNetwork);
+      const status = err instanceof ApiError ? err.status : 0;
+      setError(status === 429 ? contact.errorBusy : status === 422 ? contact.errorEmail : contact.errorNetwork);
       setSending(false);
     }
   }
 
   const shown = hover || stars;
-  const field = "mt-2 w-full rounded-xl border border-lilac bg-white px-4 py-3 text-night placeholder:text-slate/50 focus:border-night";
   return (
     <form onSubmit={onSubmit} className="space-y-8" noValidate>
       <div className="max-w-md">
-        <RideField me={me} lang={lang} t={contact} field={field} />
+        <RideField me={me} lang={lang} t={contact} />
       </div>
       <fieldset>
         <legend className="font-semibold text-night">{t.stars}</legend>
@@ -83,14 +85,14 @@ export function RateForm({ lang, t, contact }: { lang: Lang; t: Dict["rate"]; co
           rows={5}
           maxLength={5000}
           placeholder={stars >= 4 ? t.commentPlaceholder : ""}
-          className={`${field} resize-y`}
+          className={`${FIELD} resize-y`}
         />
       </label>
 
       {!me && (
         <label className="block max-w-md">
           <span className="font-semibold text-night">{contact.email}</span>
-          <input name="email" type="email" required autoComplete="email" className={field} />
+          <input name="email" type="email" required autoComplete="email" className={FIELD} />
         </label>
       )}
 

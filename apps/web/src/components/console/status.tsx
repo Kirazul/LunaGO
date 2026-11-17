@@ -1,3 +1,5 @@
+import { humanize } from "@/lib/format";
+
 // Every conversation is in one of these states. Colour carries the meaning: teal = done,
 // amber = waiting for you, red = urgent, grey = nothing to do.
 
@@ -55,8 +57,4 @@ export function StatusPill({ status }: { status: string }) {
 
 export function statusLabel(status: string): string {
   return STATUS[status]?.label ?? humanize(status);
-}
-
-export function humanize(value: string): string {
-  return value.replaceAll("_", " ");
 }

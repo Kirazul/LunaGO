@@ -5,7 +5,11 @@ import { Suspense } from "react";
 import { TrackFromQuery } from "@/components/site/track-view";
 import { dict, isLang } from "@/lib/i18n";
 
-export const metadata: Metadata = { title: "Your request", robots: { index: false } };
+// The browser tab's title, in the page's language.
+export async function generateMetadata({ params }: PageProps<"/[lang]/track">): Promise<Metadata> {
+  const { lang } = await params;
+  return { title: isLang(lang) ? dict(lang).track.title : undefined, robots: { index: false } };
+}
 
 export default async function TrackPage({ params }: PageProps<"/[lang]/track">) {
   const { lang } = await params;

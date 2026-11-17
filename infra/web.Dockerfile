@@ -6,8 +6,6 @@ WORKDIR /repo/apps/web
 COPY apps/web/package.json apps/web/pnpm-lock.yaml apps/web/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY apps/web ./
-# The Help Center pages are generated from company/help_center at build time.
-COPY company/help_center /repo/company/help_center
 # Inlined into the browser bundle at build time.
 ARG NEXT_PUBLIC_API_URL=http://localhost:8000
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL

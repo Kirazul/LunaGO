@@ -3,8 +3,11 @@
 import { useEffect, useState } from "react";
 
 import { VolumeChart } from "@/components/console/volume-chart";
-import { api, type ExperimentRow, type Insights } from "@/lib/api";
+import { api } from "@/lib/api";
+import type { ExperimentRow, Insights } from "@/lib/types";
 
+// Insights: what a large set of real customer messages shows (message volume and incidents per
+// day, recurring problems found by clustering), then the measured results behind the system.
 export default function InsightsPage() {
   const [data, setData] = useState<Insights | null>(null);
   const [rows, setRows] = useState<ExperimentRow[]>([]);
@@ -52,10 +55,10 @@ export default function InsightsPage() {
         <table className="mt-2 w-full text-left text-sm">
           <thead className="text-muted">
             <tr>
-              <th className="py-1 pr-4 font-medium">Day</th>
-              <th className="py-1 pr-4 font-medium">What customers wrote about</th>
-              <th className="py-1 pr-4 text-right font-medium">Messages</th>
-              <th className="py-1 text-right font-medium">Burst z</th>
+              <th scope="col" className="py-1 pr-4 font-medium">Day</th>
+              <th scope="col" className="py-1 pr-4 font-medium">What customers wrote about</th>
+              <th scope="col" className="py-1 pr-4 text-right font-medium">Messages</th>
+              <th scope="col" className="py-1 text-right font-medium">Burst z</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
@@ -99,10 +102,10 @@ export default function InsightsPage() {
         <table className="mt-3 w-full text-left text-sm">
           <thead className="text-muted">
             <tr>
-              <th className="py-1 pr-4 font-medium">Question</th>
-              <th className="py-1 pr-4 font-medium">Measured</th>
-              <th className="py-1 pr-4 font-medium">Result</th>
-              <th className="py-1 font-medium">Source</th>
+              <th scope="col" className="py-1 pr-4 font-medium">Question</th>
+              <th scope="col" className="py-1 pr-4 font-medium">Measured</th>
+              <th scope="col" className="py-1 pr-4 font-medium">Result</th>
+              <th scope="col" className="py-1 font-medium">Source</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">

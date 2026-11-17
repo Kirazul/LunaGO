@@ -16,6 +16,8 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
+// Root layout of the staff console (one of three, with (root) and (site)): its own font and
+// colours, always in English, and every page sits behind the sign-in screen (ConsoleShell).
 export default function ConsoleLayout({ children }: LayoutProps<"/console">) {
   return (
     <html lang="en" className={plex.variable}>

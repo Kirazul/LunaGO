@@ -2,10 +2,16 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
+import { useId, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 
-import { account, api, ApiError, type Account, type Lang } from "@/lib/api";
-import type { Dict } from "@/lib/i18n";
+import { api, ApiError } from "@/lib/api";
+import type { Dict, Lang } from "@/lib/i18n";
+import { account } from "@/lib/session";
+import type { Account } from "@/lib/types";
+import { useMenu } from "@/lib/use-menu";
+
+// The customer account on the website: who is signed in (useAccount), the header button with its
+// menu, the sign-in / sign-up form, and a wrapper for pages that need an account.
 
 /** The signed-in customer; `undefined` before the browser has read it (first render). */
 export function useAccount(): Account | null | undefined {
@@ -24,22 +30,8 @@ export async function signOut() {
 // Header: "Sign in", or the customer's name with a small menu.
 export function AccountButton({ lang, t }: { lang: Lang; t: Dict["nav"] }) {
   const me = useAccount();
-  const [open, setOpen] = useState(false);
-  const box = useRef<HTMLDivElement>(null);
+  const { open, setOpen, box } = useMenu();
   const menuId = useId();
-
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: MouseEvent | KeyboardEvent) => {
-      if (e instanceof KeyboardEvent ? e.key === "Escape" : !box.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", close);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("mousedown", close);
-      document.removeEventListener("keydown", close);
-    };
-  }, [open]);
 
   if (me === undefined) return <span className="inline-block h-9 w-24" aria-hidden />;
   if (!me)
@@ -102,10 +94,10 @@ export function RequireAccount({ lang, t, title, children }: { lang: Lang; t: Di
 }
 
 // Sign in or create an account. After success, go to ?next= (or stay).
-export function AuthForm({ lang, t, initialMode = "signin" }: { lang: Lang; t: Dict["account"]; initialMode?: "signin" | "signup" }) {
+export function AuthForm({ lang, t }: { lang: Lang; t: Dict["account"] }) {
   const router = useRouter();
   const next = useSearchParams().get("next");
-  const [mode, setMode] = useState(initialMode);
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -125,9 +117,9 @@ export function AuthForm({ lang, t, initialMode = "signin" }: { lang: Lang; t: D
       if (next?.startsWith(`/${lang}/`)) router.push(next);
     } catch (err) {
       const status = err instanceof ApiError ? err.status : 0;
-      setError(
-        status === 401 ? t.wrong : status === 409 ? t.exists : status === 422 ? t.weak : status === 429 ? t.busy : t.network,
-      );
+      // 422: the server refused the form, because of the password length or the email address.
+      const refused = password.length < 8 ? t.weak : t.badEmail;
+      setError(status === 401 ? t.wrong : status === 409 ? t.exists : status === 422 ? refused : status === 429 ? t.busy : t.network);
     } finally {
       setBusy(false);
     }

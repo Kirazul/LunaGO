@@ -5,7 +5,10 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 
 import { ComplaintLensMark } from "@/components/brand";
-import { api, ApiError, session, type Session } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
+import { session } from "@/lib/session";
+import type { Session } from "@/lib/types";
+import { useMenu } from "@/lib/use-menu";
 
 /** The signed-in session; `undefined` before the browser has read it (first render). */
 export function useSession(): Session | null | undefined {
@@ -90,22 +93,8 @@ function Header({ session: s }: { session: Session }) {
 }
 
 function UserMenu({ session: s }: { session: Session }) {
-  const [open, setOpen] = useState(false);
-  const box = useRef<HTMLDivElement>(null);
+  const { open, setOpen, box } = useMenu();
   const menuId = useId();
-
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: MouseEvent | KeyboardEvent) => {
-      if (e instanceof KeyboardEvent ? e.key === "Escape" : !box.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", close);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("mousedown", close);
-      document.removeEventListener("keydown", close);
-    };
-  }, [open]);
 
   const initials = s.user.name
     .split(/\s+/)

@@ -5,7 +5,11 @@ import { Suspense } from "react";
 import { AccountPage } from "@/components/site/account-page";
 import { dict, isLang } from "@/lib/i18n";
 
-export const metadata: Metadata = { title: "Sign in", robots: { index: false } };
+// The browser tab's title, in the page's language.
+export async function generateMetadata({ params }: PageProps<"/[lang]/account">): Promise<Metadata> {
+  const { lang } = await params;
+  return { title: isLang(lang) ? dict(lang).account.signInTitle : undefined, robots: { index: false } };
+}
 
 export default async function SignInPage({ params }: PageProps<"/[lang]/account">) {
   const { lang } = await params;

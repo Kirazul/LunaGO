@@ -3,8 +3,7 @@
 import Link from "next/link";
 
 import { AuthForm, signOut, useAccount } from "@/components/site/account";
-import type { Lang } from "@/lib/api";
-import type { Dict } from "@/lib/i18n";
+import type { Dict, Lang } from "@/lib/i18n";
 
 export function AccountPage({ lang, t }: { lang: Lang; t: Dict }) {
   const me = useAccount();

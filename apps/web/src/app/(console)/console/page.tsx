@@ -2,20 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ChannelMark } from "@/components/console/channel";
-import { humanize, StatusPill } from "@/components/console/status";
+import { StatusPill } from "@/components/console/status";
+import { TryPanel } from "@/components/console/try-panel";
 import { useEvents } from "@/components/console/use-events";
-import { api, FORUM_URL, SUPPORT_EMAIL, type Stats, type TicketSummary } from "@/lib/api";
+import { api } from "@/lib/api";
+import { humanize, senderName } from "@/lib/format";
 import { ago } from "@/lib/time";
-
-const EXAMPLES = [
-  "J'ai été facturé deux fois pour ma course d'hier soir !",
-  "The driver took a huge detour on ride LG-45782, the fare doubled.",
-  "The driver was texting while driving on the highway and I felt unsafe.",
-  "How do cancellation fees work?",
-];
+import type { Stats, TicketSummary } from "@/lib/types";
 
 const TABS = [
   { id: "all", label: "All", statuses: null },
@@ -37,11 +33,6 @@ function Priority({ value }: { value: number | null }) {
       <span className="w-6 text-right">{value}</span>
     </span>
   );
-}
-
-function who(t: TicketSummary): string {
-  if (t.sender.startsWith("forum:")) return `@${t.sender.slice(6)}`;
-  return t.sender_name || t.sender;
 }
 
 export default function InboxPage() {
@@ -159,13 +150,13 @@ export default function InboxPage() {
         ))}
       </dl>
 
-      <div role="tablist" aria-label="Show" className="mt-8 flex gap-1 overflow-x-auto border-b border-line">
+      {/* Filters of the one list below (not ARIA tabs: there are no tab panels). */}
+      <div role="group" aria-label="Show" className="mt-8 flex gap-1 overflow-x-auto border-b border-line">
         {TABS.map((t) => (
           <button
             key={t.id}
-            role="tab"
             type="button"
-            aria-selected={tab === t.id}
+            aria-pressed={tab === t.id}
             onClick={() => setTab(t.id)}
             className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm ${
               tab === t.id ? "border-ink font-semibold" : "border-transparent text-muted hover:text-ink"
@@ -185,7 +176,7 @@ export default function InboxPage() {
           <li key={t.id} className={fresh.has(t.id) ? "row-new" : ""}>
             <Link href={`/console/ticket/?id=${t.id}`} className="block px-4 py-3 active:bg-desk">
               <span className="flex items-center gap-2">
-                <span className="min-w-0 flex-1 truncate font-semibold">{who(t)}</span>
+                <span className="min-w-0 flex-1 truncate font-semibold">{senderName(t)}</span>
                 <StatusPill status={t.status} />
               </span>
               <span className="mt-1 line-clamp-2 text-sm">{t.summary ?? t.subject ?? "Reading the message…"}</span>
@@ -223,7 +214,7 @@ export default function InboxPage() {
                     onClick={(e) => e.stopPropagation()}
                     className="block max-w-48 truncate font-semibold underline-offset-2 hover:underline"
                   >
-                    {who(t)}
+                    {senderName(t)}
                   </Link>
                   <span className="mt-0.5 flex items-center gap-2 text-xs text-muted">
                     <ChannelMark channel={t.channel} showLabel={false} />
@@ -261,72 +252,5 @@ export default function InboxPage() {
       )}
       {!tickets && !error && <p className="mt-3 px-4 py-12 text-center text-muted">Loading…</p>}
     </main>
-  );
-}
-
-// Send a test message, or open one of the real customer channels.
-function TryPanel({ onSent }: { onSent: (ticketId: number) => void }) {
-  const [draft, setDraft] = useState(EXAMPLES[0]);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function send(e: FormEvent) {
-    e.preventDefault();
-    setSending(true);
-    try {
-      // example.com is reserved for examples (RFC 2606).
-      const t = await api.submit({ email: "console.demo@example.com", body: draft, channel: "web" });
-      onSent(t.id);
-    } catch (err) {
-      setError((err as Error).message);
-      setSending(false);
-    }
-  }
-
-  const link = "underline-offset-2 hover:underline";
-  return (
-    <section aria-label="Try it as a customer" className="mt-4 rounded-xl border border-line bg-white p-4">
-      <form onSubmit={send}>
-        <label className="text-sm font-medium" htmlFor="test-message">
-          Write a message as a customer would (English or French)
-        </label>
-        <textarea
-          id="test-message"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          rows={3}
-          className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm"
-        />
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          {EXAMPLES.map((example) => (
-            <button
-              key={example}
-              type="button"
-              onClick={() => setDraft(example)}
-              title={example}
-              className="max-w-60 truncate rounded-full border border-line px-2.5 py-0.5 text-xs hover:border-ink"
-            >
-              {example}
-            </button>
-          ))}
-          <button
-            type="submit"
-            disabled={sending || draft.trim().length < 2}
-            className="ml-auto rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-          >
-            {sending ? "Sending…" : "Send and watch"}
-          </button>
-        </div>
-        {error && <p role="alert" className="mt-2 text-sm text-escalated">{error}</p>}
-      </form>
-      <p className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-line pt-3 text-sm text-muted">
-        <span>Or use a real channel:</span>
-        <a href={`mailto:${SUPPORT_EMAIL}`} className={link}><ChannelMark channel="email" /></a>
-        <Link href="/en/contact" className={link}><ChannelMark channel="web" /></Link>
-        <Link href="/en/?chat=open" className={link}><ChannelMark channel="chat" /></Link>
-        <Link href="/en/rate" className={link}><ChannelMark channel="review" /></Link>
-        <a href={FORUM_URL} target="_blank" rel="noreferrer" className={link}><ChannelMark channel="forum" /></a>
-      </p>
-    </section>
   );
 }
