@@ -111,8 +111,8 @@ export function VolumeChart({ timeline }: Readonly<{ timeline: Insights["timelin
         </div>
       )}
       <figcaption className="mt-2 text-sm text-muted">
-        Blue days had a major incident (strongest burst z ≥ {MAJOR_Z}). Hover any day for its detected
-        incidents.
+        Bright bars are days with a major incident. Point at a bar to see what customers were writing
+        about that day.
       </figcaption>
     </figure>
   );

@@ -57,7 +57,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
 const NAV = [
   { href: "/console", label: "Inbox" },
   { href: "/console/insights", label: "Insights" },
-  { href: "/console/annotate", label: "Annotate" },
+  { href: "/console/annotate", label: "Label messages" },
 ] as const;
 
 function Header({ session: s }: { session: Session }) {
