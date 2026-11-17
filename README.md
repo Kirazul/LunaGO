@@ -19,7 +19,8 @@ nobody is impersonated; the models are trained and evaluated on real, public sup
 
 | | |
 |---|---|
-| LunaGo website (EN/FR) | https://kirazul.github.io/ComplainLens/ |
+| Portal (start here: two buttons) | https://kirazul.github.io/ComplainLens/ |
+| LunaGo customer site (EN/FR) | https://kirazul.github.io/ComplainLens/en/ |
 | ComplaintLens console (staff) | https://kirazul.github.io/ComplainLens/console/ |
 | API (interactive docs) | https://api-production-a4e30.up.railway.app/docs |
 
@@ -29,9 +30,9 @@ when idle to stay within the free plan, so the first request after a pause takes
 | Channel | How | Where the reply goes |
 |---|---|---|
 | Email | write to `lunagocare@agentmail.to` | an email reply in the same thread (about a minute) |
-| Contact form | website, "Contact" (optional ride ID) | the ticket's tracking page |
-| Live chat | website, "Chat with us" (every page) | the chat itself; the conversation continues there |
-| Ride rating | website, "Rate a ride" (stars + comment) | the ticket's tracking page |
+| Contact form | customer site, "Contact" (optional ride ID) | the ticket's tracking page |
+| Live chat | customer site, "Live support" | the chat itself; the conversation continues there |
+| Ride rating | customer site, "Rate a ride" (stars + comment) | the ticket's tracking page |
 | Community forum | [GitHub Discussions](https://github.com/Kirazul/ComplainLens/discussions) of this repository | a comment in the thread |
 
 ## How it works
@@ -81,7 +82,7 @@ In a second terminal, start the website and the console:
 ```powershell
 cd apps/web
 pnpm install
-pnpm dev          # http://localhost:3000/en (website) and http://localhost:3000/console (staff)
+pnpm dev          # http://localhost:3000 (portal), /en (customer site), /console (staff)
 ```
 
 Console sign-in on your computer: `admin` / `admin`.
@@ -147,10 +148,10 @@ pnpm build                     # website: the static site builds
 | `src/complaintlens/channels/` | Email (AgentMail, IMAP/SMTP) |
 | `src/complaintlens/api/` | The web API: `public` (anyone), `account` (customers), `staff` (console), `research` (Insights, Annotate), `relay` (forum, webhooks), `inbox` (email poller), `main` (startup) |
 | `src/complaintlens/` (other files) | `schemas.py` shared types · `store.py` database tables · `settings.py` configuration · `auth.py`, `security.py` sign-in and rate limits · `rides.py`, `demo_data.py` LunaGo's simulated rides · `gate.py`, `trends.py`, `topics.py`, `rootcause.py`, `silver.py`, `annotation.py` research modules · `cli.py` the `complaintlens` command |
-| `apps/web/` | Next.js app: the LunaGo website (`/en`, `/fr`) and the ComplaintLens console (`/console`) |
+| `apps/web/` | Next.js app: the portal (`/`), the LunaGo customer site (`/en`, `/fr`) and the ComplaintLens console (`/console`). The moving background is the Dithering shader of [Paper Shaders](https://shaders.paper.design) |
 | `company/help_center/` | LunaGo's policies (EN/FR): the knowledge base the replies cite (private: not shown on the website) |
 | `ml/scripts/` | Data preparation, baselines, training; one script per experiment |
-| `eval/` | Annotation guidelines, the items to annotate, the retrieval questions, the prompt-injection test messages |
+| `eval/` | Annotation guidelines, the items to annotate, the retrieval questions, the prompt-injection test messages (ours, and a sample written by other people) |
 | `reports/results/` | Every reported number, as a JSON file written by a script |
 | `reports/report/` | The LaTeX report |
 | `docs/` | The guide, the plan, the proposal, the architecture diagrams |

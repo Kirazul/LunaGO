@@ -277,6 +277,11 @@ Three rules protect the conversation (`service.py`):
   only prepares drafts.
 - An escalated conversation stays escalated.
 
+**Three entrances.** The address of the project opens a portal with two buttons: the customer
+site and the admin console. The customer site's home page is only buttons (sign in, book a
+ride, your rides, live support, contact, rate a ride, forum); each opens a panel over the
+page instead of a new page.
+
 **Channels.** Email (an AgentMail inbox: the reply arrives in the customer's own email thread),
 live chat, contact form, ride rating (stars and a comment), and a public forum (this repository's
 GitHub Discussions, answered by a scheduled relay). Whatever the channel, the message is
@@ -497,12 +502,18 @@ sent to the customer automatically.
   in no source.
 - The detector did not flag a single one of the 37,065 real messages sent to Uber, nor any of
   our 62 test questions: it costs agents no extra work on ordinary traffic.
+- On attacks written by other people the detector is much weaker, and we measured it. We took
+  a random sample of a public competition in which 839 people tried to trick an email
+  assistant (LLMail-Inject, Microsoft), and split it in two by team. The list of phrases as
+  first written caught 7% of the half we kept untouched (16 of 236): those attackers write
+  messages that look ordinary. Three patterns learned from the other half raise it to 50%
+  (118 of 236), still with no false alarm on real messages.
 
 **Limits.** 24 messages is a small test: "0 of 24" is compatible with a true rate of up to 14%.
-The detector's list of phrases was written after seeing these attacks, so catching all 24 says
-little about attacks worded differently. That is why the two other protections and the fixed
-rules (money, safety, numbers) do not depend on it. The next step is a second set of attacks
-written by someone who has not seen the list.
+A list of phrases catches at best half of the attacks other people write. That is why the two
+other protections and the fixed rules (money, safety, numbers) do not depend on wording: they
+are the ones that must hold. The next step is an end-to-end test with other people's attacks
+rewritten for our system.
 
 ## 9. How it is built and hosted
 
@@ -515,6 +526,7 @@ written by someone who has not seen the list.
 | Database | SQLite (one file) | Enough for the demo; another database works by changing one setting |
 | Website and console | Next.js, exported as static pages | Free hosting on GitHub Pages; no server to maintain |
 | Live updates | Server-sent events | The console updates the moment a step finishes |
+| Moving background | Dithering shader of Paper Shaders (open source) | A maintained component instead of our own; drawn by the graphics card, stops for people who ask for reduced motion |
 
 **Hosting, all free.** Website and console on GitHub Pages; API on Railway (1 GB of memory, it
 sleeps when idle and wakes on the next request); email through AgentMail; the forum through
@@ -548,13 +560,13 @@ hidden instructions (8.7); free hosting.
 | Masking people's names | Only emails, phones and cards are masked today |
 | A French test set | French is supported live but its accuracy is not yet measured on labelled data |
 
-**One point of the 17 November review to keep in mind.** The proposal says personal data is
-masked "before storage". In the system as built it is masked before the language model and in the
-trace, while the original message is stored in the ticket, because the customer and the agent
-must be able to read the conversation. The plan, the report and the architecture diagram now
-describe what the system does, and the plan notes the difference from the proposal. If storing
-only masked text is wanted, it is a change to the product (the conversation shown to the customer
-would contain placeholders), not a correction.
+**One point of the 17 November review to keep in mind.** The first proposal said personal data
+is masked "before storage". In the system as built it is masked before the language model and in
+the trace, while the original message is stored in the ticket, because the customer and the
+agent must be able to read the conversation. The proposal, the plan, the report and the
+architecture diagram now all describe what the system does. If storing only masked text is
+wanted, it is a change to the product (the conversation shown to the customer would contain
+placeholders), not a correction.
 
 ## 11. Ideas to go further (proposed, not built)
 
@@ -666,6 +678,10 @@ files.
   (`lib/config.ts`, `types.ts`, `session.ts`, `api.ts`); the console's conversation page is
   split into the page, its side cards and its reply box; logic that existed in two copies now
   exists once. Signing in or out now also applies to the other open tabs.
+- The website got one look and a front door. A portal page offers two buttons (customer site,
+  admin console). The customer site and the console use the same dark theme; the customer
+  home page is a set of buttons that open panels (sign in, book a ride, your rides, contact,
+  rate a ride) instead of separate pages. The old pages still work, for links in emails.
 - Removed leftovers: an unused setting and constant, an unused website dependency and two
   unused functions, a stale copy step in the website's Docker image, stale mentions of food
   delivery and of public policy pages.
@@ -677,6 +693,7 @@ were read in full and found consistent with their descriptions.
 
 **How it was verified.** 164 automated tests; the code-style and type checks of both parts; a full
 build of the website; and two scripted sessions in a real browser (the chat, a customer account,
-"Your rides", the contact form, the console's inbox and a conversation). The website has no
-custom "page not found" page: with this site's structure the framework only offers an
-experimental way to add one, so it was left out.
+"Your rides", the panels of the home page, the contact form, the console's inbox and a
+conversation). The website also has its own "page not found" page in both languages, written
+by a small build step, because the framework only offers an experimental way to add one for a
+site with this structure.

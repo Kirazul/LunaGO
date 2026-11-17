@@ -305,8 +305,14 @@ list of phrases that address the AI, whose matches are never answered automatica
 spam; delimiters that the customer's text cannot close; one rule in the LLM's instructions), 0 of
 24 succeeded (CI 0--14\%), all 24 reached a person, and the phrase list flagged none of 37{,}065
 real Uber messages (\res{injection\_attacks.json}, \res{injection\_attacks\_no\_defence.json}).
-The phrase list was written with these attacks in view, so it does not measure generalisation;
-\todo{a held-out attack set written by a third party}.
+The phrase list was written with these attacks in view, so we also measured it on attacks written
+by others: a random sample of 636 submissions of the public LLMail-Inject challenge, split by team
+into a development half and a test half that was only counted. The list as first written flagged
+7\% of the test half (16 of 236); three patterns read off the development half raise it to 50\%
+(118 of 236, CI 44--56\%), still with no false alarm on the real messages. A phrase list is
+therefore one layer only: the protections that do not depend on wording, and the fixed rules on
+money, safety and numbers, are the ones that must hold. \todo{end-to-end test with third-party
+attacks rewritten for this system}.
 
 \subsection{Grounded replies (RQ3, generation part)}
 \todo{faithfulness, citation precision/recall, policy violations, blind human comparison with real

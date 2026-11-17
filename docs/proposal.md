@@ -74,7 +74,7 @@ At corpus level: emerging-issue alerts with probable-cause hypotheses.
 
 ### 7. Ethics and licensing
 - **No impersonation:** the demo company is fictional and labelled as a student project.
-- **Personal data:** masked before storage and before any external API call; demo data deleted afterwards.
+- **Personal data:** masked before any external API call and in the stored processing trace (the original message stays in the ticket, where the customer and the agents read it); demo data deleted afterwards.
 - **Licences:** non-commercial and share-alike terms respected.
 - **Automation limits:** money is never granted automatically; safety, injury and legal cases always reach a human.
 - **Bias:** performance compared across languages and writing styles.
