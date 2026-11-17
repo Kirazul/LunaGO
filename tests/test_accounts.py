@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from complaintlens import rides
 from complaintlens.schemas import utcnow
-from tests.conftest import sign_in
+from tests.conftest import needs_classical_models, sign_in
 
 
 def signup(client, email="sam@example.com", password="sam-pass-123"):
@@ -78,6 +78,7 @@ def test_ride_state_follows_the_clock():
     assert rides.state(trip, start + timedelta(minutes=trip.duration_min + 1)) == "completed"
 
 
+@needs_classical_models
 def test_ride_problem_without_an_id_asks_for_it_then_links(client, staff):
     me = signup(client)
     dup = next(

@@ -1,5 +1,7 @@
 """The HTTP API, offline: public endpoints, the console (signed in) and research pages."""
 
+from tests.conftest import needs_classical_models
+
 
 def test_health_reports_configuration(client):
     body = client.get("/api/health").json()
@@ -7,6 +9,7 @@ def test_health_reports_configuration(client):
     assert body["llm"]["enabled"] is False and body["email"]["enabled"] is False
 
 
+@needs_classical_models
 def test_form_message_is_processed_and_traced(client, staff):
     r = client.post(
         "/api/messages",
@@ -31,6 +34,7 @@ def test_form_message_is_processed_and_traced(client, staff):
     assert client.get("/api/stats", headers=staff).json()["tickets"] == 1
 
 
+@needs_classical_models
 def test_customer_can_track_only_with_the_secret_key(client):
     r = client.post("/api/messages", json={"email": "a@b.co", "body": "Where is my lost phone?"})
     ticket = r.json()

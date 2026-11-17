@@ -8,9 +8,17 @@ import pytest
 from fastapi.testclient import TestClient
 
 from complaintlens import store
-from complaintlens.settings import get_settings
+from complaintlens.settings import ROOT, get_settings
 
 ADMIN_PASSWORD = "admin-pass-123"
+
+# Offline, a message is recognised as a complaint by the trained classical models, which are not
+# stored in git. Tests that depend on that decision are skipped, with the fix, until they exist.
+needs_classical_models = pytest.mark.skipif(
+    not (ROOT / "models" / "classical.joblib").exists(),
+    reason="train the classical models first: uv run python ml/scripts/fetch_complaints2019.py, "
+    "then uv run python ml/scripts/train_classical.py",
+)
 
 
 @pytest.fixture

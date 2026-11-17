@@ -127,6 +127,9 @@ uv run ruff format .           # Python: formatting
 uv run pytest                  # Python: all tests (no network needed)
 ```
 
+Three tests use the trained classical models (steps 2 and 3 of the quick start); until the models
+exist they are skipped, and pytest prints the two commands to run.
+
 ```powershell
 cd apps/web
 pnpm lint                      # website: common mistakes
