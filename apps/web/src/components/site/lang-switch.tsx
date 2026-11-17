@@ -17,7 +17,7 @@ export function LangSwitch({ current, label }: { current: Lang; label: string })
       href={query ? `${target}?${query}` : target}
       hrefLang={other}
       lang={other}
-      className="rounded-full border border-lilac/50 px-3 py-1 text-sm hover:border-amber hover:text-amber"
+      className="rounded-full border border-lilac px-3 py-1 text-sm text-night hover:border-amber hover:text-amber"
     >
       {label}
     </Link>

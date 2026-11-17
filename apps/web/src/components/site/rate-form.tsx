@@ -64,7 +64,7 @@ export function RateForm({ lang, t, contact }: { lang: Lang; t: Dict["rate"]; co
               <svg
                 viewBox="0 0 24 24"
                 className={`size-12 rounded-lg peer-focus-visible:outline peer-focus-visible:outline-3 peer-focus-visible:outline-amber ${
-                  n <= shown ? "text-amber" : "text-lilac"
+                  n <= shown ? "text-amber" : "text-slate/35"
                 }`}
                 aria-hidden
               >

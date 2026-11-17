@@ -30,10 +30,10 @@ function TrackView({ id, trackKey, lang, t }: { id: number; trackKey: string; la
 
   return (
     <div>
-      <div className="flex items-center gap-5 rounded-3xl bg-night p-6 text-paper sm:p-7">
-        <Moon phase={done} size={72} title={`${done}/4`} />
+      <div className="flex items-center gap-5 rounded-3xl bg-white p-6 text-night ring-1 ring-lilac sm:p-7">
+        <Moon phase={done} size={72} title={`${done}/4`} surface="day" />
         <div>
-          <p className="text-lilac">
+          <p className="text-slate">
             {t.track.ticket} {ticket.number} · {dateOnly(ticket.received_at, lang)}
           </p>
           <p className="mt-1 font-display text-2xl font-bold sm:text-3xl" aria-live="polite">

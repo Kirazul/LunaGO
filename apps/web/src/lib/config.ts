@@ -5,3 +5,5 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000
 export const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "lunagocare@agentmail.to";
 export const FORUM_URL =
   process.env.NEXT_PUBLIC_FORUM_URL ?? "https://github.com/Kirazul/ComplainLens/discussions";
+// The plain-language explanation of the whole project, linked from the portal.
+export const GUIDE_URL = "https://github.com/Kirazul/ComplainLens/blob/main/docs/guide.md";

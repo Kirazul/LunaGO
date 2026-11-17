@@ -19,13 +19,13 @@ export function LunaGoMark({ size = 32, tile = false }: { size?: number; tile?: 
   );
 }
 
-/** Mark and wordmark. `tone` is the background it sits on. */
-export function LunaGoLogo({ tone = "dark", size = 30 }: { tone?: "dark" | "light"; size?: number }) {
+/** Mark and wordmark, for dark backgrounds. Its colours are fixed: a logo does not follow themes. */
+export function LunaGoLogo({ size = 30 }: { size?: number }) {
   return (
-    <span className="inline-flex items-center gap-2 font-display font-extrabold tracking-tight" style={{ fontSize: size * 0.8 }}>
-      <LunaGoMark size={size} tile={tone === "light"} />
-      <span className={tone === "dark" ? "text-paper" : "text-night"}>
-        Luna<span className={tone === "dark" ? "text-amber" : "text-amber-deep"}>Go</span>
+    <span className="inline-flex items-center gap-2 font-display font-extrabold tracking-tight text-[#f5f3ff]" style={{ fontSize: size * 0.8 }}>
+      <LunaGoMark size={size} />
+      <span>
+        Luna<span className="text-[#f2a33a]">Go</span>
       </span>
     </span>
   );

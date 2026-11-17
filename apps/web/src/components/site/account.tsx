@@ -94,7 +94,8 @@ export function RequireAccount({ lang, t, title, children }: { lang: Lang; t: Di
 }
 
 // Sign in or create an account. After success, go to ?next= (or stay).
-export function AuthForm({ lang, t }: { lang: Lang; t: Dict["account"] }) {
+// `heading={false}` leaves out the title, for a panel that already shows one.
+export function AuthForm({ lang, t, heading = true }: { lang: Lang; t: Dict["account"]; heading?: boolean }) {
   const router = useRouter();
   const next = useSearchParams().get("next");
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -128,7 +129,7 @@ export function AuthForm({ lang, t }: { lang: Lang; t: Dict["account"] }) {
   const field = "mt-1.5 w-full rounded-xl border border-lilac bg-white px-4 py-3 text-night focus:border-night";
   return (
     <form onSubmit={submit} className="space-y-4">
-      <h2 className="font-display text-2xl font-bold text-night">{mode === "signup" ? t.signUpTitle : t.signInTitle}</h2>
+      {heading && <h2 className="font-display text-2xl font-bold text-night">{mode === "signup" ? t.signUpTitle : t.signInTitle}</h2>}
       {mode === "signup" && (
         <label className="block">
           <span className="font-semibold text-night">{t.name}</span>

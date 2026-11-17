@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node scripts/flatten-segments.mjs",
+    "build": "next build && node scripts/flatten-segments.mjs && node scripts/write-404.mjs",
     "lint": "eslint"
   },
   "dependencies": {
+    "@paper-design/shaders-react": "0.0.82",
     "next": "16.4.5",
     "react": "19.3.0",
     "react-dom": "19.3.0"

@@ -18,12 +18,13 @@ const en = {
     switch: "Français",
   },
   home: {
-    title: "Book a ride",
-    lead: "Choose two places, see the price, then book.",
-    helpTitle: "A problem with a ride?",
-    helpLead: "Open Your rides, choose the ride, then write to us.",
-    helpCta: "Chat with us",
-    phasesTitle: "How your message is handled",
+    welcome: "Welcome to LunaGo",
+    hello: "Hello, {name}",
+    account: "Sign in or create an account",
+    support: "Live support",
+    close: "Close",
+    forum: "Forum",
+    portal: "All entrances",
   },
   phases: {
     received: "Received",
@@ -164,7 +165,6 @@ const en = {
     keep: "Bookmark this page to come back to the conversation.",
   },
   footer: "LunaGo is a fictional company created for a university NLP project (ComplaintLens). Rides and payments are simulated.",
-  staff: "Staff console",
 };
 
 type Dict = typeof en;
@@ -180,12 +180,13 @@ const fr: Dict = {
     switch: "English",
   },
   home: {
-    title: "Commander une course",
-    lead: "Choisissez deux lieux, voyez le prix, puis commandez.",
-    helpTitle: "Un problème avec une course ?",
-    helpLead: "Ouvrez Vos courses, choisissez la course, puis écrivez-nous.",
-    helpCta: "Clavarder avec nous",
-    phasesTitle: "Comment votre message est traité",
+    welcome: "Bienvenue chez LunaGo",
+    hello: "Bonjour, {name}",
+    account: "Se connecter ou créer un compte",
+    support: "Support en direct",
+    close: "Fermer",
+    forum: "Forum",
+    portal: "Toutes les entrées",
   },
   phases: {
     received: "Reçue",
@@ -326,7 +327,6 @@ const fr: Dict = {
     keep: "Ajoutez cette page à vos favoris pour revenir à la conversation.",
   },
   footer: "LunaGo est une entreprise fictive créée pour un projet universitaire de TALN (ComplaintLens). Les courses et les paiements sont simulés.",
-  staff: "Console du personnel",
 };
 
 export function dict(lang: Lang): Dict {

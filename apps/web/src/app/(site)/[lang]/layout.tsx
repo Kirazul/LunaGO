@@ -8,7 +8,6 @@ import { LunaGoLogo } from "@/components/brand";
 import { AccountButton } from "@/components/site/account";
 import { ChatWidget } from "@/components/site/chat-widget";
 import { LangSwitch } from "@/components/site/lang-switch";
-import { FORUM_URL } from "@/lib/config";
 import { dict, isLang, LANGS } from "@/lib/i18n";
 import "../../globals.css";
 
@@ -25,54 +24,35 @@ export function generateStaticParams() {
 }
 
 // Root layout of the LunaGo website (one of three, with (root) and (console)): <html lang> follows
-// the language in the address, and every page gets the header, the footer and the chat.
+// the language in the address, and every page gets the top bar, the footer and the chat. The
+// class "site" on <body> switches on the dark theme (see globals.css).
 export default async function SiteLayout({ children, params }: LayoutProps<"/[lang]">) {
   const { lang } = await params;
   if (!isLang(lang)) notFound();
   const t = dict(lang);
-  const link = "hover:text-amber";
   return (
     <html lang={lang} className={`${bricolage.variable} ${atkinson.variable}`}>
-      <body className="flex min-h-screen flex-col bg-paper font-body text-slate">
-        <header className="bg-night text-paper">
-          {/* Phones: logo and account on the first row, links below. Desktop: one row. */}
-          <nav aria-label={t.nav.label} className="mx-auto grid max-w-6xl grid-cols-[1fr_auto] items-center gap-x-8 gap-y-3 px-5 py-4 md:flex">
-            <Link href={`/${lang}`} aria-label="LunaGo" className="md:mr-auto">
+      <body className="site flex min-h-dvh flex-col bg-paper font-body text-slate">
+        <header className="relative z-10 border-b border-lilac bg-paper/85 backdrop-blur-md">
+          <nav aria-label={t.nav.label} className="mx-auto flex max-w-5xl items-center gap-3 px-5 py-3">
+            <Link href={`/${lang}`} aria-label="LunaGo" className="mr-auto">
               <LunaGoLogo />
             </Link>
-            <div className="col-span-2 row-start-2 flex flex-wrap items-center gap-x-6 gap-y-2 md:order-none md:gap-x-8">
-              <Link href={`/${lang}/book`} className={link}>
-                {t.nav.book}
-              </Link>
-              <Link href={`/${lang}/rides`} className={link}>
-                {t.nav.rides}
-              </Link>
-              <Link href={`/${lang}/contact`} className={link}>
-                {t.nav.contact}
-              </Link>
-              <Suspense fallback={null}>
-                <LangSwitch current={lang} label={t.nav.switch} />
-              </Suspense>
-            </div>
-            <div className="col-start-2 row-start-1">
-              <AccountButton lang={lang} t={t.nav} />
-            </div>
+            <Suspense fallback={null}>
+              <LangSwitch current={lang} label={t.nav.switch} />
+            </Suspense>
+            <AccountButton lang={lang} t={t.nav} />
           </nav>
         </header>
-        <main className="flex-1">{children}</main>
-        <footer className="border-t border-lilac/60 bg-paper">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-baseline gap-x-6 gap-y-2 px-5 py-6 pb-24 text-sm text-slate/80">
-            <p className="max-w-[70ch]">{t.footer}</p>
-            <Link href={`/${lang}/rate`} className="underline underline-offset-4 hover:text-night">
-              {t.contact.rate}
+        <main className="relative flex flex-1 flex-col">{children}</main>
+        {/* The one sentence every page must carry: the company is not real. */}
+        <footer className="relative z-10 flex justify-center px-5 pb-24 pt-6">
+          <p className="rounded-2xl border border-lilac bg-white px-5 py-2.5 text-center text-sm text-slate">
+            {t.footer}{" "}
+            <Link href="/" className="font-semibold text-amber underline underline-offset-4 hover:text-night">
+              {t.home.portal}
             </Link>
-            <a href={FORUM_URL} className="underline underline-offset-4 hover:text-night">
-              {t.contact.forum}
-            </a>
-            <Link href="/console" className="underline underline-offset-4 hover:text-night">
-              {t.staff}
-            </Link>
-          </div>
+          </p>
         </footer>
         <Suspense fallback={null}>
           <ChatWidget lang={lang} t={t} />

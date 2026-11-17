@@ -5,10 +5,11 @@ import { useState } from "react";
 import type { Insights } from "@/lib/types";
 
 // Daily message volume with incident days emphasised (emphasis form: one accent hue, the rest in
-// a recessive gray). Palette: accent = reference slot 1 (#2a78d6); gray is de-emphasis, below 3:1
-// on the surface, so the incident table under the chart provides the required relief.
-const ACCENT = "#2a78d6";
-const MUTED = "#c4c8ce";
+// a recessive tone). The accent is a blue light enough for the dark surface; the recessive bars
+// are close to the background on purpose, so the incident table under the chart gives the detail.
+// Lines and labels use the console's theme colours.
+const ACCENT = "#5b9cf0";
+const MUTED = "#3b3963";
 const W = 960;
 const H = 260;
 const PAD = { top: 28, right: 12, bottom: 34, left: 44 };
@@ -42,8 +43,8 @@ export function VolumeChart({ timeline }: Readonly<{ timeline: Insights["timelin
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Messages per day, with days that had a detected incident highlighted">
         {ticks.map((t) => (
           <g key={t}>
-            <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke="#e6e8eb" />
-            <text x={PAD.left - 8} y={y(t) + 4} textAnchor="end" fontSize="11" fill="#5b6676">
+            <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke="var(--color-line)" />
+            <text x={PAD.left - 8} y={y(t) + 4} textAnchor="end" fontSize="11" fill="var(--color-muted)">
               {t}
             </text>
           </g>
@@ -69,7 +70,7 @@ export function VolumeChart({ timeline }: Readonly<{ timeline: Insights["timelin
                 onMouseLeave={() => setHover(null)}
               />
               {i % 7 === 0 && (
-                <text x={x + barW / 2} y={H - 12} textAnchor="middle" fontSize="11" fill="#5b6676">
+                <text x={x + barW / 2} y={H - 12} textAnchor="middle" fontSize="11" fill="var(--color-muted)">
                   {fmt(d.day)}
                 </text>
               )}
@@ -83,7 +84,7 @@ export function VolumeChart({ timeline }: Readonly<{ timeline: Insights["timelin
             textAnchor="end"
             fontSize="12"
             fontWeight="600"
-            fill="#172033"
+            fill="var(--color-ink)"
           >
             {fmt(timeline[strongest.i].day)}: {timeline[strongest.i].incidents[0].terms.slice(0, 2).join(" ")}
           </text>

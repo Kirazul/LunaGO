@@ -5,6 +5,7 @@
    - ComplaintLens (console): a calm analytical desk where colour encodes the decision. */
 @theme {
   --color-night: #1e1b4b;
+  --color-night-deep: #05050d; /* the portal's background: almost black, so its dots show */
   --color-night-soft: #2c2870;
   --color-paper: #f5f3ff;
   --color-lilac: #c7c2f0;
@@ -37,7 +38,60 @@ html {
 }
 
 .console :focus-visible {
-  outline-color: #2563eb;
+  outline-color: #7aa7ff;
+}
+
+/* Dark theme of the customer site and of the console.
+   Both were first designed on light backgrounds, with the colour names above. Rather than
+   rewrite every class, each name keeps its ROLE and gets the dark value of that role here:
+   what was the dark text colour becomes the light text colour, and so on. Read the names as
+   roles, not as colours. */
+.site {
+  color-scheme: dark; /* the browser's own controls (lists, date pickers, scrollbars) go dark too */
+  --color-night: #f5f3ff; /* main text; also the fill of the main buttons */
+  --color-night-soft: #d9d5f5; /* the main buttons, hovered */
+  --color-paper: #05050d; /* page background; also the text on the main buttons */
+  --color-white: #0c0b1a; /* panels and text boxes */
+  --color-slate: #b4b0d6; /* body text */
+  --color-lilac: #2e2c55; /* borders and hairlines */
+  --color-amber-deep: #f2a33a; /* links (the light theme needed a darker amber) */
+}
+/* Amber stays amber in the dark, so what is written on it must stay dark. */
+.site .bg-amber,
+.site .hover\:bg-amber:hover {
+  color: #1e1b4b;
+}
+
+.console {
+  color-scheme: dark;
+  --color-desk: #05050d; /* page background */
+  --color-white: #0c0b1a; /* panels; also the text on filled buttons */
+  --color-ink: #f5f3ff; /* main text; also the fill of the main buttons */
+  --color-line: #26243f; /* borders */
+  --color-muted: #a29ec8; /* secondary text */
+  --color-quiet: #8683aa;
+  /* The decision colours, brighter so they read on a dark background. */
+  --color-sent: #3ecfb4;
+  --color-review: #f2a33a;
+  --color-escalated: #ff8a8a;
+  /* The pale tints behind badges and notices, as dark tints of the same hue. */
+  --color-red-50: #2a1218;
+  --color-red-200: #5c2530;
+  --color-red-300: #7c3040;
+  --color-blue-50: #0f1a33;
+  --color-blue-200: #24407a;
+  --color-blue-800: #a8c7ff;
+  --color-blue-900: #c2d8ff;
+  --color-teal-50: #0c2622;
+  --color-teal-200: #1d5148;
+  --color-gray-100: #17162c;
+  --color-gray-200: #2c2a4a;
+  --color-amber-50: #2a1d0b;
+  --color-amber-100: #36260e;
+  --color-amber-200: #5a4016;
+  --color-indigo-50: #17153a;
+  --color-indigo-200: #343078;
+  --color-indigo-800: #bcb7ff;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -67,7 +121,7 @@ html {
 /* The inbox's one motion: a message that just arrived glows once, then settles. */
 @keyframes row-arrive {
   from {
-    background-color: #fdecc8;
+    background-color: rgb(242 163 58 / 0.28);
   }
   to {
     background-color: transparent;
@@ -77,20 +131,18 @@ html {
   animation: row-arrive 3.5s ease-out both;
 }
 
-/* The site's one orchestrated moment: on load, the four moons of "how your request moves" wax in
-   order, received to answered, the way a request does. */
-@keyframes wax {
+/* The portal's one entrance: the text and the two doors rise into place once, on load. */
+@keyframes portal-in {
   from {
     opacity: 0;
-    filter: blur(3px);
-    transform: scale(0.92);
+    transform: translateY(14px);
   }
   to {
     opacity: 1;
-    filter: none;
     transform: none;
   }
 }
-.wax {
-  animation: wax 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+.portal-in {
+  animation: portal-in 800ms cubic-bezier(0.2, 0.7, 0.2, 1) 120ms both;
 }
+

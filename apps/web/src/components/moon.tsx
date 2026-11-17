@@ -16,7 +16,7 @@ export function Moon({ phase, size = 40, className, title, surface = "night" }: 
   // Ellipse x-radius: +r at new moon (covers lit half -> dark), 0 at half, -r at full (adds the other half).
   const rx = r * (1 - phase / 2);
   const lit = surface === "night" ? "var(--color-paper)" : "var(--color-night)";
-  const dark = surface === "night" ? "var(--color-night-soft)" : "#e9e6fb";
+  const dark = surface === "night" ? "var(--color-night-soft)" : "var(--color-lilac)";
   return (
     <svg
       viewBox="0 0 40 40"

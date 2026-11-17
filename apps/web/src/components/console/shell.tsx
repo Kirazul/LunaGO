@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 
 import { ComplaintLensMark } from "@/components/brand";
+import { DitherBackground } from "@/components/dither-background";
 import { api, ApiError } from "@/lib/api";
 import { session } from "@/lib/session";
 import type { Session } from "@/lib/types";
@@ -128,8 +129,8 @@ function UserMenu({ session: s }: { session: Session }) {
           <Link href="/console/account" onClick={() => setOpen(false)} className="block rounded-lg px-3 py-2 hover:bg-desk">
             Change password
           </Link>
-          <Link href="/en" className="block rounded-lg px-3 py-2 hover:bg-desk">
-            Open the LunaGo website
+          <Link href="/" className="block rounded-lg px-3 py-2 hover:bg-desk">
+            All entrances
           </Link>
           <button type="button" onClick={signOut} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-desk">
             Sign out
@@ -165,15 +166,17 @@ function SignIn() {
 
   const field = "mt-1 w-full rounded-lg border border-line bg-white px-3 py-2.5 focus:border-ink";
   return (
-    <main className="grid min-h-screen place-items-center px-5 py-10">
+    <main className="relative isolate grid min-h-dvh place-items-center overflow-hidden px-5 py-10">
+      <div aria-hidden className="absolute inset-0 -z-10">
+        <DitherBackground />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_min(32rem,96vw)_min(26rem,56vh)_at_50%_50%,rgb(5_5_13/0.95),rgb(5_5_13/0.78)_55%,transparent)]" />
+      </div>
       <div className="w-full max-w-sm">
-        <div className="flex items-center gap-2.5 text-lg font-semibold">
-          <ComplaintLensMark size={28} />
-          ComplaintLens
-        </div>
-        <h1 className="mt-8 text-2xl font-semibold">Sign in to the support console</h1>
-        <p className="mt-1 text-muted">For LunaGo staff.</p>
-        <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl border border-line bg-white p-6">
+        <h1 className="flex items-center justify-center gap-3 text-2xl font-semibold">
+          <ComplaintLensMark size={34} />
+          Admin console
+        </h1>
+        <form onSubmit={submit} className="mt-7 space-y-4 rounded-2xl border border-line bg-white p-6">
           <label className="block text-sm font-medium">
             Username
             <input name="username" required autoComplete="username" autoCapitalize="none" spellCheck={false} className={field} />
@@ -191,8 +194,8 @@ function SignIn() {
             {busy ? "Signing in…" : "Sign in"}
           </button>
         </form>
-        <Link href="/en" className="mt-6 inline-block text-sm text-muted hover:text-ink">
-          Go to the LunaGo website
+        <Link href="/" className="mt-6 block text-center text-sm text-muted hover:text-ink">
+          All entrances
         </Link>
       </div>
     </main>

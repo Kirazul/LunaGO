@@ -17,7 +17,8 @@ function localInput(date: Date): string {
 }
 
 // Choose two places and a time, see the upfront price, book (signed in).
-export function BookingForm({ lang, t, tone = "light" }: { lang: Lang; t: Dict["book"]; tone?: "light" | "dark" }) {
+// After a booking the customer is sent to Your rides, unless `onBooked` says what to do instead.
+export function BookingForm({ lang, t, onBooked }: { lang: Lang; t: Dict["book"]; onBooked?: () => void }) {
   const router = useRouter();
   const me = useAccount();
   const [places, setPlaces] = useState<string[]>([]);
@@ -56,15 +57,15 @@ export function BookingForm({ lang, t, tone = "light" }: { lang: Lang; t: Dict["
     try {
       const when = later ? new Date(at).toISOString() : new Date().toISOString();
       await api.book(pickup, dropoff, when);
-      router.push(`/${lang}/rides?booked=1`);
+      if (onBooked) onBooked();
+      else router.push(`/${lang}/rides?booked=1`);
     } catch {
       setError(t.error);
       setBusy(false);
     }
   }
 
-  const dark = tone === "dark";
-  const label = `text-sm font-semibold ${dark ? "text-lilac" : "text-night"}`;
+  const label = `text-sm font-semibold text-night`;
   const field = "mt-1.5 w-full rounded-xl border border-lilac bg-white px-4 py-3 text-night focus:border-amber";
   const now = new Date();
   return (
@@ -100,9 +101,7 @@ export function BookingForm({ lang, t, tone = "light" }: { lang: Lang; t: Dict["
           {[false, true].map((isLater) => (
             <label
               key={String(isLater)}
-              className={`cursor-pointer rounded-full px-4 py-2 text-sm font-semibold ring-1 has-[:checked]:bg-amber has-[:checked]:text-night has-[:checked]:ring-amber has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-amber ${
-                dark ? "text-paper ring-lilac/40" : "bg-white text-night ring-lilac"
-              }`}
+              className={`cursor-pointer rounded-full px-4 py-2 text-sm font-semibold ring-1 has-[:checked]:bg-amber has-[:checked]:text-night has-[:checked]:ring-amber has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-amber bg-white text-night ring-lilac`}
             >
               <input type="radio" name="when" className="sr-only" checked={later === isLater} onChange={() => setLater(isLater)} />
               {isLater ? t.later : t.now}
@@ -122,13 +121,13 @@ export function BookingForm({ lang, t, tone = "light" }: { lang: Lang; t: Dict["
         </div>
       </fieldset>
 
-      <div className={`flex flex-wrap items-end justify-between gap-4 rounded-2xl px-5 py-4 ${dark ? "bg-night-soft/80 ring-1 ring-lilac/20" : "bg-white ring-1 ring-lilac"}`}>
+      <div className={`flex flex-wrap items-end justify-between gap-4 rounded-2xl px-5 py-4 bg-white ring-1 ring-lilac`}>
         <div aria-live="polite">
-          <p className={`text-sm ${dark ? "text-lilac" : "text-slate"}`}>{t.price}</p>
-          <p className={`font-display text-3xl font-bold ${dark ? "text-paper" : "text-night"}`}>
+          <p className={`text-sm text-slate`}>{t.price}</p>
+          <p className={`font-display text-3xl font-bold text-night`}>
             {shown ? money(shown.price, lang) : "–"}
           </p>
-          <p className={`text-sm ${dark ? "text-lilac" : "text-slate"}`}>
+          <p className={`text-sm text-slate`}>
             {shown ? `${shown.distance_km} ${t.km} · ${shown.duration_min} ${t.minutes}` : " "}
           </p>
         </div>
@@ -150,7 +149,7 @@ export function BookingForm({ lang, t, tone = "light" }: { lang: Lang; t: Dict["
         )}
       </div>
       {error && (
-        <p role="alert" className={dark ? "text-amber" : "text-night"}>
+        <p role="alert" className="text-night">
           {error}
         </p>
       )}
