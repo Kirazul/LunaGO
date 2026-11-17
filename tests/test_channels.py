@@ -46,6 +46,22 @@ def test_forum_post_is_processed_and_its_reply_queued_then_delivered(client):
     assert client.get("/api/channels/forum/outbox", headers=headers).json() == []
 
 
+def test_forum_replies_do_not_show_internal_source_codes(client):
+    # Regression (live, 2026-11-17): a reply posted on the forum ended with "[HC-CANCEL#3]".
+    # Those codes are for agents and the verifier; email and chat already hide them.
+    from complaintlens.store import Reply, Ticket, new_session
+
+    with new_session() as s:
+        ticket = Ticket(channel="forum", sender="forum:rider42", body="x", external_id="D_1")
+        s.add(ticket)
+        s.commit()
+        answer = "The first 2 minutes are free [HC-CANCEL#3]. Your ride cost $12.00 [F2]."
+        s.add(Reply(ticket_id=ticket.id, kind="answer", body=answer, status="queued"))
+        s.commit()
+    outbox = client.get("/api/channels/forum/outbox", headers={"X-Channel-Token": CHANNEL}).json()
+    assert outbox[0]["body"] == "The first 2 minutes are free. Your ride cost $12.00."
+
+
 def test_message_submission_is_rate_limited_per_client(client):
     msg = {"email": "a@example.com", "body": "Where is my order?"}
     assert client.post("/api/messages", json=msg).status_code == 202

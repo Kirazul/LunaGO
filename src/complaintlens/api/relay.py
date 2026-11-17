@@ -17,6 +17,7 @@ from sqlmodel import col, select
 from complaintlens.api.inbox import poll_inbox_once
 from complaintlens.api.state import state
 from complaintlens.channels.agentmail import verify_webhook
+from complaintlens.pipeline.respond import strip_citations
 from complaintlens.schemas import Channel, InboundMessage, utcnow
 from complaintlens.security import require_channel_token
 from complaintlens.settings import get_settings
@@ -57,7 +58,7 @@ def _forum_outbox(s, ticket_id: int | None = None) -> list[dict[str, Any]]:
             "ticket": t.number,
             "language": t.language,
             "kind": r.kind,
-            "body": r.body,
+            "body": strip_citations(r.body),  # source codes are for agents, not the public
         }
         for r, t in s.exec(q).all()
     ]
