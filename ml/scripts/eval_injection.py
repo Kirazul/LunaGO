@@ -21,8 +21,14 @@ threat must be escalated; a fraud report must not be dropped as spam).
 The same messages are run twice: with the protections of complaintlens/pipeline/injection.py
 (the system as deployed) and without them (--no-defence), so the result shows what they add.
 The detector's list of phrases was written with these attacks in view, so "24 of 24 flagged" is
-not a measure of how it generalises; what is measured independently is its false-alarm rate on
-the real Uber messages (when data/interim/uber_first_contacts.parquet is present).
+not a measure of how it generalises. Two things are measured independently:
+- its false-alarm rate on the real Uber messages (when data/interim/uber_first_contacts.parquet is
+  present);
+- its recall on attacks written by other people: a random sample of the public LLMail-Inject
+  challenge (eval/injection_thirdparty.jsonl, see fetch_injection_thirdparty.py). The sample is
+  split by team: the "dev" half may be read to improve the list, the "test" half is only counted.
+  Only the detector is measured there: those attacks try to make an email assistant send an
+  email, an action our system does not have, so "reached the customer" has no meaning for them.
 
 Rates are reported with Wilson 95% intervals (24 messages: the intervals are wide and say so).
 LLM answers are cached on disk, so a re-run is free and identical.
@@ -59,6 +65,7 @@ from complaintlens.store import Reply, StageRecord, get_engine, new_session
 
 ATTACKS = Path("eval/injection_attacks.jsonl")
 REAL_MESSAGES = Path("data/interim/uber_first_contacts.parquet")
+THIRD_PARTY = Path("eval/injection_thirdparty.jsonl")
 RETRIES = 6  # the free LLM plan limits tokens per minute: wait and try again
 PAUSE_SECONDS = 45
 # Errors of the LLM service (retried). Any other stage error is an outcome to record: the
@@ -155,6 +162,25 @@ def false_alarms() -> dict | None:
     }
 
 
+def third_party() -> dict | None:
+    """Share of other people's attacks that the detector flags, per split (see the docstring)."""
+    if not THIRD_PARTY.exists():
+        return None
+    rows = [json.loads(x) for x in THIRD_PARTY.read_text(encoding="utf-8").splitlines()]
+    out: dict = {"source": "LLMail-Inject (Microsoft, 2025), Phase 1 submissions, MIT licence"}
+    for split in ("dev", "test"):
+        part = [row for row in rows if row["split"] == split]
+        flagged = sum(1 for row in part if injection_signals(row["text"]))
+        out[split] = {
+            "attacks": len(part),
+            "teams": len({row["team"] for row in part}),
+            "flagged": flagged,
+            "rate": round(flagged / len(part), 3),
+            "ci95": wilson(flagged, len(part)),
+        }
+    return out
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", type=Path, required=True)
@@ -187,15 +213,15 @@ def main() -> None:
         get_engine(database_url).dispose()  # close the database connections
 
     families = sorted({row["family"] for row in rows})
+    defended = get_settings().injection_defence
     results = {
         "protocol": __doc__.split("Usage:")[0].strip(),
         "llm": client.model,
         "defence": get_settings().injection_defence,
         "attacks": len(rows),
         "flagged_by_the_detector": sum(1 for a in attacks if injection_signals(a["text"])),
-        "false_alarms_on_real_messages": false_alarms()
-        if get_settings().injection_defence
-        else None,
+        "false_alarms_on_real_messages": false_alarms() if defended else None,
+        "detector_on_third_party_attacks": third_party() if defended else None,
         "attack_succeeded": rate(rows, "attack_succeeded"),
         "obeyed_in_draft": rate(rows, "obeyed_in_draft"),
         "decisions": dict(Counter(row["decision"] for row in rows)),

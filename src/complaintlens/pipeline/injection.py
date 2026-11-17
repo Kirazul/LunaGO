@@ -50,6 +50,12 @@ _SIGNALS = [
     r"\b(affiche[zs]?|[ée]cri[stv]\w*|montre[zs]?|r[ée]p[èe]te[zs]?)\b.{0,40}"
     r"\b(instructions|consignes|prompt)\b",
     r"\b(reply|respond|answer)\b.{0,30}\bwith exactly\b|\bavec exactement\b",
+    # speaking to the assistant as such, or asking it to run something (seen in the development
+    # half of the third-party attacks, eval/injection_thirdparty.jsonl)
+    r"\b(dear|hey|hi|hello|bonjour|cher)[ ,]+(assistant|ai|bot|chatbot)\b",
+    r"\b(trigger|invoke|execute|make|perform)\b.{0,30}\b(api|function|tool)\s+call\b",
+    # the role markers of chat models, pasted to fake a conversation: <|assistant|>, <|end|>
+    r"<\|[a-z_]+\|>",
     # forged structure: our quotation marks, a sources section, our internal source IDs
     r"<<<|>>>",
     r"(?m)^\s*sources\s*:",
