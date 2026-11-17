@@ -14,7 +14,7 @@ from functools import cache
 
 from py3langid.langid import MODEL_FILE, LanguageIdentifier
 
-from complaintlens.pipeline.base import Context
+from complaintlens.pipeline.base import Context, stage
 from complaintlens.schemas import StageResult
 
 SUPPORTED = ("en", "fr")
@@ -40,6 +40,7 @@ def detect_language(text: str) -> tuple[str, float]:
     return "other", float(prob)
 
 
+@stage("language")
 def language_stage(ctx: Context) -> StageResult:
     lang, prob = detect_language(ctx["text_masked"])
     ctx["language"] = lang
@@ -49,6 +50,3 @@ def language_stage(ctx: Context) -> StageResult:
         confidence=round(prob, 3),
         note="unsupported language: will be routed to a human" if lang == "other" else None,
     )
-
-
-language_stage.stage_name = "language"  # type: ignore[attr-defined]

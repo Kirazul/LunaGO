@@ -89,6 +89,8 @@ def annotate_agreement(set: str = "pilot") -> dict[str, Any]:
 
 
 RESULTS_DIR = ROOT / "reports" / "results"
+# The prompt-injection test, with and without the protections (ml/scripts/eval_injection.py).
+INJECTION_RESULTS = ("injection_attacks.json", "injection_attacks_no_defence.json")
 
 
 def _result(name: str) -> dict[str, Any]:
@@ -141,8 +143,27 @@ def experiments() -> list[dict[str, Any]]:
         add(
             "RQ3",
             "Help Center retrieval MRR@10, dense vs. BM25 (development set)",
-            f"{dense['mrr@10']:.2f} vs. {r['bm25']['mrr@10']:.2f}",
+            f"{dense['mrr@10']} vs. {r['bm25']['mrr@10']}",
             "retrieval_helpcenter.json",
+        )
+    if (RESULTS_DIR / "retrieval_summary_int8.json").exists():
+        v = _result("retrieval_summary_int8.json")["variants"]
+        add(
+            "RQ3",
+            "Right policy section among the 4 given to the reply writer: search with the "
+            "message's summary vs. the customer's words (development set)",
+            f"{v['dense_summary']['recall@4']:.2f} vs. {v['dense_text']['recall@4']:.2f}",
+            "retrieval_summary_int8.json",
+        )
+    if all((RESULTS_DIR / f).exists() for f in INJECTION_RESULTS):
+        with_defence, without = (_result(f)["attack_succeeded"] for f in INJECTION_RESULTS)
+        add(
+            "Safety",
+            "Messages with hidden instructions that got an obeying reply sent automatically, "
+            "with vs. without the protections",
+            f"{with_defence['count']} of {with_defence['of']} vs. "
+            f"{without['count']} of {without['of']}",
+            INJECTION_RESULTS[0],
         )
     if (RESULTS_DIR / "trends_uber.json").exists():
         t = _result("trends_uber.json")

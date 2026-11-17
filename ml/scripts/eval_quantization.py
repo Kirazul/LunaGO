@@ -1,6 +1,6 @@
 """Does int8 quantization of the embedding model hurt retrieval? (deployment check, plan §7)
 
-Same 70 held-out questions as eval_retrieval.py; fastembed's default export of the model
+Same 62 questions as eval_retrieval.py; fastembed's default export of the model
 (16-bit weights) against the official int8 ONNX file. Reports MRR@10 / Recall@1 / Recall@3 with
 bootstrap CIs, a two-sided paired bootstrap test on the MRR difference, how often both put the
 same section first, model size and median query latency.

@@ -15,6 +15,7 @@ from __future__ import annotations
 import secrets
 from datetime import datetime
 from functools import cache
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import JSON, Column, inspect, text
@@ -70,7 +71,8 @@ class Ticket(SQLModel, table=True):
     external_id: str | None = Field(default=None, index=True)  # email Message-ID
     thread_id: str | None = Field(default=None, index=True)  # email conversation (AgentMail)
     in_reply_to: str | None = None
-    # processing | auto_send | awaiting_approval | escalated | no_reply | answered | closed
+    # processing, then the pipeline's decision (schemas.Action): auto_send | awaiting_approval |
+    # escalated | no_reply | needs_info; then answered (an agent replied) | closed (resolved)
     status: str = "new"
     language: str | None = None
     team: str | None = None
@@ -116,7 +118,7 @@ class StageRecord(SQLModel, table=True):
 class Reply(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     ticket_id: int = Field(foreign_key="ticket.id", index=True)
-    kind: str  # answer | acknowledgement | escalation
+    kind: str  # answer | acknowledgement | escalation | question ("which ride?")
     body: str
     citations: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     verification: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
@@ -176,9 +178,7 @@ class Annotation(SQLModel, table=True):
 @cache
 def get_engine(url: str | None = None):
     url = url or get_settings().database_url
-    if url.startswith("sqlite:///"):
-        from pathlib import Path
-
+    if url.startswith("sqlite:///"):  # create the folder of the database file if needed
         Path(url.removeprefix("sqlite:///")).parent.mkdir(parents=True, exist_ok=True)
     connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
     engine = create_engine(url, connect_args=connect_args)

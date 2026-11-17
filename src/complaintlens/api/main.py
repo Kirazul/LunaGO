@@ -7,6 +7,7 @@ import asyncio
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from importlib.metadata import version
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -54,7 +55,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     email_sender = (
         AgentMailSender(settings) if settings.email_inbox == "agentmail" else EmailSender(settings)
     )
-    senders = {Channel.EMAIL.value: email_sender} if settings.email_can_send else {}
+    senders = {Channel.EMAIL.value: email_sender} if settings.email_enabled else {}
     kb = KnowledgeBase.load(settings.help_center_dir)
     retriever = await asyncio.to_thread(build_retriever, kb)
     state.processor = Processor(
@@ -69,7 +70,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         state.email_status = {
             "enabled": True,
             "address": settings.email_address,
-            "sends_replies": settings.email_can_send,
             "provider": settings.email_inbox,
         }
         state.email_task = asyncio.create_task(inbox.email_loop())
@@ -78,7 +78,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         state.email_task.cancel()
 
 
-app = FastAPI(title="ComplaintLens API", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="ComplaintLens API", version=version("complaintlens"), lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[

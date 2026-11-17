@@ -47,11 +47,11 @@ from complaintlens.store import (
 )
 
 log = logging.getLogger(__name__)
+# The pipeline: every message goes through these six stages, in this order (pipeline/*.py).
 STAGES = [normalize_stage, pii_stage, language_stage, understand_stage, link_stage, respond_stage]
 Publish = Callable[[dict[str, Any]], None]
 READ_ON_SITE = {"web", "chat", "review"}  # replies are shown on our website
 RELAYED = {"forum"}  # replies wait in an outbox for the forum relay (GitHub Actions)
-ONCE_PER_CONVERSATION = {"acknowledgement", "escalation"}
 
 
 class ReplySender(Protocol):

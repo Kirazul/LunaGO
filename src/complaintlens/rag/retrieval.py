@@ -11,13 +11,16 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from typing import Protocol
 
 import numpy as np
 
 from complaintlens.rag.knowledge import Chunk, Hit, KnowledgeBase
+from complaintlens.settings import get_settings
 
+log = logging.getLogger(__name__)
 RRF_K = 60
 
 
@@ -130,55 +133,6 @@ def reciprocal_rank_fusion(rankings: Iterable[list[Hit]], k: int = RRF_K) -> lis
     return [Hit(chunks[key], round(scores[key], 5)) for key in ordered]
 
 
-def search_with_summary(
-    retriever: Retriever,
-    kb: KnowledgeBase,
-    text: str,
-    summary: str | None,
-    lang: str,
-    k: int = 4,
-) -> list[Hit]:
-    """Fuse a search on the customer's own words (their language) with a search on the LLM's
-    English summary (English index, mapped back to the same sections in the customer's language).
-
-    Development set (reports/results/retrieval_summary.json): MRR@10 0.657 vs 0.613 for the text
-    alone (deployed int8 model: 0.643 vs 0.589); it also fixes polite messages whose greetings
-    dilute the query.
-    """
-    by_text = retriever.search(text, lang, 10)
-    if not summary:
-        return by_text[:k]
-    by_summary = []
-    for hit in retriever.search(summary, "en", 10):
-        chunk = kb.get(hit.chunk.id, lang)
-        if chunk is not None:
-            by_summary.append(Hit(chunk, hit.score))
-    return reciprocal_rank_fusion([by_text, by_summary])[:k]
-
-
-def build_retriever(kb: KnowledgeBase) -> Retriever:
-    """The configured retriever; falls back to BM25 if the embedding model cannot be loaded."""
-    import logging
-
-    from complaintlens.settings import get_settings
-
-    s = get_settings()
-    bm25 = BM25Retriever(kb)
-    if s.retrieval not in ("dense", "hybrid"):
-        return bm25
-    try:
-        embedder = FastEmbedder(
-            s.embedding_model,
-            cache_dir=str(s.models_dir / "fastembed"),
-            int8=s.embedding_int8,
-        )
-        dense = DenseRetriever(kb, embedder)
-        return dense if s.retrieval == "dense" else HybridRetriever(bm25, dense)
-    except Exception:
-        logging.getLogger(__name__).exception("dense retriever unavailable, using BM25")
-        return bm25
-
-
 class HybridRetriever:
     def __init__(self, sparse: Retriever, dense: Retriever, depth: int = 50) -> None:
         self.name = f"hybrid({sparse.name}+{dense.name})"
@@ -192,3 +146,57 @@ class HybridRetriever:
             ]
         )
         return fused[:k]
+
+
+def search_with_summary(
+    retriever: Retriever,
+    kb: KnowledgeBase,
+    text: str,
+    summary: str | None,
+    lang: str,
+    k: int = 4,
+) -> list[Hit]:
+    """The ``k`` sections given to the reply writer.
+
+    With an LLM summary: search the English index with that one-sentence summary and return the
+    same sections in the customer's language (sections share IDs across languages). The summary
+    states the problem without greetings, ride IDs or placeholders, which dilute a search on the
+    customer's own words. Without a summary (no LLM configured): search the customer's words.
+
+    Measured on the 62 development questions with the deployed int8 model
+    (reports/results/retrieval_summary_int8.json): the right section is among the 4 for 82% of
+    questions (``dense_summary``), against 74% when the summary ranking is fused with the
+    customer's-words ranking (the previous version; +8 points, paired bootstrap p = 0.047) and
+    69% for the customer's words alone. MRR@10: 0.66, 0.64, 0.59.
+    """
+    by_text = retriever.search(text, lang, k)
+    if not summary:
+        return by_text
+    hits = []
+    for hit in retriever.search(summary, "en", k):
+        chunk = kb.get(hit.chunk.id, lang)  # the same section, in the customer's language
+        if chunk is not None:
+            hits.append(Hit(chunk, hit.score))
+    # A section with no version in the customer's language leaves a gap: fill it from their words.
+    found = {h.chunk.id for h in hits}
+    hits += [h for h in by_text if h.chunk.id not in found]
+    return hits[:k]
+
+
+def build_retriever(kb: KnowledgeBase) -> Retriever:
+    """The configured retriever; falls back to BM25 if the embedding model cannot be loaded."""
+    s = get_settings()
+    bm25 = BM25Retriever(kb)
+    if s.retrieval not in ("dense", "hybrid"):
+        return bm25
+    try:
+        embedder = FastEmbedder(
+            s.embedding_model,
+            cache_dir=str(s.models_dir / "fastembed"),
+            int8=s.embedding_int8,
+        )
+        dense = DenseRetriever(kb, embedder)
+        return dense if s.retrieval == "dense" else HybridRetriever(bm25, dense)
+    except Exception:
+        log.exception("dense retriever unavailable, using BM25")
+        return bm25

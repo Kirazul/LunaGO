@@ -1,4 +1,8 @@
-"""Stage 2: mask personal data before storage and before any external API call (plan §6.1, §14).
+"""Stage 2: mask personal data before any external API call (plan §6.1, §14).
+
+The LLM, the policy search and the stored trace only see the masked text (``ctx["text_masked"]``).
+The original message stays in the ticket (``Ticket.body``), where the customer and the agents
+read it, and the link stage reads it locally to find the ride ID, amounts and dates.
 
 v1 handles structured PII with patterns: emails, phone numbers (North American and French
 formats) and payment-card numbers validated with the Luhn checksum (so order numbers and amounts
@@ -10,7 +14,7 @@ from __future__ import annotations
 
 import re
 
-from complaintlens.pipeline.base import Context
+from complaintlens.pipeline.base import Context, stage
 from complaintlens.schemas import StageResult
 
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
@@ -55,6 +59,7 @@ def mask_pii(text: str) -> tuple[str, list[dict[str, str]]]:
     return text, found
 
 
+@stage("pii_masking")
 def pii_stage(ctx: Context) -> StageResult:
     masked, found = mask_pii(ctx["text"])
     ctx["text_masked"] = masked
@@ -62,6 +67,3 @@ def pii_stage(ctx: Context) -> StageResult:
     for item in found:
         counts[item["type"]] = counts.get(item["type"], 0) + 1
     return StageResult(name="pii_masking", output={"masked": counts, "text": masked})
-
-
-pii_stage.stage_name = "pii_masking"  # type: ignore[attr-defined]

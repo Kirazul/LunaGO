@@ -12,7 +12,7 @@ import html
 import re
 import unicodedata
 
-from complaintlens.pipeline.base import Context
+from complaintlens.pipeline.base import Context, stage
 from complaintlens.schemas import Channel, StageResult
 
 # A line that starts the quoted part of a reply: everything from here on is old content.
@@ -53,6 +53,7 @@ def html_to_text(markup: str) -> str:
     return "\n".join(line.strip() for line in text.splitlines() if line.strip())
 
 
+@stage("normalize")
 def normalize_stage(ctx: Context) -> StageResult:
     msg = ctx["message"]
     body = msg.body
@@ -73,6 +74,3 @@ def normalize_stage(ctx: Context) -> StageResult:
         },
         note="kept only the customer's new text" if len(body) < len(msg.body) else None,
     )
-
-
-normalize_stage.stage_name = "normalize"  # type: ignore[attr-defined]

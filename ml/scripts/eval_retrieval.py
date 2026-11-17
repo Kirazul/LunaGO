@@ -1,6 +1,6 @@
-"""Evaluate Help Center retrieval on the held-out question set (RQ3, retrieval part; plan §7).
+"""Evaluate Help Center retrieval on the development question set (RQ3, retrieval part; plan §7).
 
-The 70 questions (eval/retrieval_questions.jsonl, one EN + one FR per section) were written before
+The 62 questions (eval/retrieval_questions.jsonl, 31 English + 31 French) were written before
 any retriever was compared. Each has one gold section. Metrics: Recall@1, Recall@3, MRR@10, with
 bootstrap 95% CIs over questions and a paired bootstrap test against BM25. Latency per query is the
 median over the set (warm model).

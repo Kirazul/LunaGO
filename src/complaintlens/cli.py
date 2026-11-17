@@ -22,6 +22,7 @@ def cmd_serve(args: argparse.Namespace) -> None:
 def cmd_send(args: argparse.Namespace) -> None:
     from complaintlens.llm import default_client
     from complaintlens.rag.knowledge import KnowledgeBase
+    from complaintlens.rag.retrieval import build_retriever
     from complaintlens.schemas import Channel, InboundMessage
     from complaintlens.service import Processor
     from complaintlens.settings import get_settings
@@ -33,8 +34,6 @@ def cmd_send(args: argparse.Namespace) -> None:
             if event.get("note"):
                 print(f"  note: {event['note']}")
             print("  " + json.dumps(out, ensure_ascii=False, default=str)[:900])
-
-    from complaintlens.rag.retrieval import build_retriever
 
     kb = KnowledgeBase.load(get_settings().help_center_dir)
     processor = Processor(kb, default_client(), publish=show, retriever=build_retriever(kb))

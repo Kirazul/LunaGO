@@ -19,7 +19,7 @@ import re
 from datetime import datetime, timedelta
 
 from complaintlens.demo_data import customer_trips, get_or_create_customer
-from complaintlens.pipeline.base import Context
+from complaintlens.pipeline.base import Context, stage
 from complaintlens.schemas import Category, MessageType, StageResult, as_utc
 from complaintlens.store import Trip
 
@@ -154,6 +154,7 @@ def trip_facts(trip: Trip) -> list[dict[str, str]]:
     return [{"id": f"F{i}", "text": t} for i, t in enumerate(facts, start=1)]
 
 
+@stage("link")
 def link_stage(ctx: Context) -> StageResult:
     session, msg = ctx["session"], ctx["message"]
     analysis = ctx.get("analysis")
@@ -209,6 +210,3 @@ def link_stage(ctx: Context) -> StageResult:
         confidence=1.0 if trip else None,
         note=note,
     )
-
-
-link_stage.stage_name = "link"  # type: ignore[attr-defined]

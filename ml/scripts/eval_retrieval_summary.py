@@ -5,8 +5,11 @@ Merci de corriger") retrieved the wrong sections with dense search on the raw te
 sections share IDs across languages, so we can search with the LLM's one-line English summary in
 the English index and return the same section in the customer's language.
 
-Compared on the 70 development questions (MRR@10, Recall@1/3): dense and BM25 on the raw text,
+Compared on the 62 development questions (MRR@10, Recall@1/3/4): dense and BM25 on the raw text,
 dense and BM25 on the English summary, and Reciprocal Rank Fusion of raw-text and summary rankings.
+Recall@4 is the one that matters for the replies: the reply writer receives four sections.
+The summary search alone is compared with its fusion with the raw-text search by a two-sided
+paired bootstrap test (MRR@10 and Recall@4).
 Summaries come from the configured LLM and are cached on disk (re-runs are free and identical).
 
 Usage (--int8: the deployed int8 embedding model, see eval_quantization.py):
@@ -22,6 +25,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+from eval_quantization import paired_two_sided
 from pydantic import BaseModel
 
 from complaintlens.llm import complete_json, default_client
@@ -100,6 +104,7 @@ def main() -> None:
             variants.setdefault(name, []).append(1 / r if r else 0.0)
             variants.setdefault(name + "@1", []).append(1.0 if r == 1 else 0.0)
             variants.setdefault(name + "@3", []).append(1.0 if r and r <= 3 else 0.0)
+            variants.setdefault(name + "@4", []).append(1.0 if r and r <= 4 else 0.0)
 
     results = {
         "questions": len(questions),
@@ -110,10 +115,24 @@ def main() -> None:
                 "mrr@10": round(float(np.mean(variants[name])), 3),
                 "recall@1": round(float(np.mean(variants[name + "@1"])), 3),
                 "recall@3": round(float(np.mean(variants[name + "@3"])), 3),
+                "recall@4": round(float(np.mean(variants[name + "@4"])), 3),
             }
             for name in variants
             if "@" not in name
         },
+    }
+    alone, fused = "dense_summary", "rrf_dense_text+dense_summary"
+    results["summary_alone_vs_fusion_with_text"] = {
+        metric: {
+            "delta": round(
+                float(np.mean(variants[alone + key]) - np.mean(variants[fused + key])), 3
+            ),
+            "p_two_sided": round(
+                paired_two_sided(np.array(variants[alone + key]), np.array(variants[fused + key])),
+                4,
+            ),
+        }
+        for metric, key in (("mrr@10", ""), ("recall@4", "@4"))
     }
     for name, row in sorted(results["variants"].items(), key=lambda x: -x[1]["mrr@10"]):
         print(f"{name:45s} {row}")

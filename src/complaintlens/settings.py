@@ -28,13 +28,14 @@ class Settings(BaseSettings):
     llm_reasoning_effort: str = "low"  # gpt-oss reasoning budget: fast and cheap in tokens
     llm_cache_dir: Path = ROOT / "data" / "cache" / "llm"
 
-    # Retrieval: "dense", "hybrid" (BM25 + dense, RRF) or "bm25". Chosen on the development
-    # question set (reports/results/retrieval_helpcenter.json): dense MRR 0.61 vs BM25 0.49
-    # (p = 0.022); RRF hybrid 0.54 (not significant): BM25 is too weak on customer wording.
+    # Retrieval: "dense", "hybrid" (BM25 + dense, RRF) or "bm25". Chosen on the 62 development
+    # questions (reports/results/retrieval_helpcenter.json): dense MRR 0.60 vs BM25 0.50
+    # (p = 0.07, not significant on so few questions); RRF hybrid 0.53: BM25 is weak on
+    # customer wording and drags the fused ranking down.
     retrieval: str = "dense"
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     # Use the model's official int8 ONNX file: the service then fits a 1 GB container. Cost on
-    # the development questions: MRR 0.59 vs 0.61, not significant (results/retrieval_int8.json).
+    # the development questions: MRR 0.59 vs 0.60, p = 0.75 (reports/results/retrieval_int8.json).
     embedding_int8: bool = True
 
     database_url: str = f"sqlite:///{(ROOT / 'data' / 'app.db').as_posix()}"
@@ -68,6 +69,11 @@ class Settings(BaseSettings):
     messages_per_ip_per_hour: int = 30
     messages_per_day: int = 300
 
+    # Customer text is untrusted: with this on, a message that gives orders to the AI is flagged
+    # and never answered automatically (pipeline/injection.py). Switch it off only to measure the
+    # system without it (ml/scripts/eval_injection.py --no-defence).
+    injection_defence: bool = True
+
     public_base_url: str = "http://localhost:3000"
     # Extra browser origins allowed to call the API (comma-separated), e.g. the website's origin.
     # localhost:3000 is always allowed.
@@ -75,17 +81,15 @@ class Settings(BaseSettings):
 
     @property
     def llm_enabled(self) -> bool:
+        """A key is set, or the LLM runs locally (Ollama needs no key)."""
         return bool(self.llm_api_key) or "localhost" in self.llm_base_url
 
     @property
     def email_enabled(self) -> bool:
+        """The mailbox is configured: both providers receive and reply."""
         if self.email_inbox == "agentmail":
             return bool(self.email_address and self.agentmail_api_key)
         return bool(self.email_address and self.email_password)
-
-    @property
-    def email_can_send(self) -> bool:
-        return self.email_enabled
 
 
 @cache

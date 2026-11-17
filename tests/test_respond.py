@@ -93,6 +93,30 @@ def test_verify_accepts_supported_numbers_and_rejects_invented_ones(kb):
     assert verify(fake_cite, hits, FACTS)["unknown_citations"] == ["HC-NOPE#1"]
 
 
+def test_verify_reads_ride_ids_ranges_and_dates_however_they_are_written(kb):
+    hits = kb.search("charged twice refund", "en")
+
+    def check(reply: str) -> dict:
+        return verify(Draft(reply=reply, confidence=0.9), hits, FACTS)
+
+    # Regression (live run, 2026-11-17): the model wrote the ride ID with a typographic hyphen
+    # (U+2011) and its digits were reported as an unsupported number.
+    assert check("Your ride LG\u201140001 was charged twice [F3].")["supported"] is True
+    assert check("Your ride LG-40001 (ticket LG-000042) was charged twice [F3].")["supported"]
+
+    # A range is two numbers, whatever the dash: both must come from the cited source. Before,
+    # "7-8 days" was not read as numbers at all, so an invented delay passed.
+    for dash in ("-", "\u2013", "\u2011"):  # hyphen, en dash, non-breaking hyphen
+        v = check(f"Refunds take 5{dash}10 business days [HC-FARES#4].")
+        assert v["supported"] is True and v["numbers_checked"] == 2, dash
+        v = check(f"Refunds take 7{dash}8 business days [HC-FARES#4].")
+        assert v["unsupported_numbers"] == [7.0, 8.0], dash
+
+    # A date written 2026-11-06 is checked like "6 November": against the record's dates.
+    assert check("Your ride on 2026-11-06 was charged twice [F3].")["supported"] is True
+    assert check("Your ride on 2026-11-09 was charged twice [F3].")["unsupported_numbers"] == [9.0]
+
+
 def test_route_and_priority_are_transparent():
     a = make_analysis(risk_flags=["safety"], urgency="immediate", severity=3)
     assert route(a) == "Safety"

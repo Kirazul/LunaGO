@@ -3,8 +3,9 @@
 1. Routing + priority: a transparent formula whose parts are shown in the console.
 2. Pre-gate on the analysis: spam / venting -> no reply; safety, injury, harassment, legal threat or
    severity 4 -> escalated to a human, with a safe acknowledgement (never an AI-written answer).
-3. Retrieval: BM25 over the Help Center in the customer's language (dense/hybrid comes next and is
-   evaluated against this baseline).
+3. Retrieval: the Help Center sections closest to the message, in the customer's language
+   (rag/retrieval.py: dense embeddings by default, searched with the LLM's summary of the
+   message; BM25 is the baseline and the fallback).
 4. Drafting: the LLM may use ONLY the retrieved sections and the code-computed trip facts, and must
    cite them ([HC-FARES#4], [F3]).
 5. Verification (deterministic): every citation must exist and every number in the reply (amounts,
@@ -23,7 +24,8 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from complaintlens.llm import ChatClient, complete_json
-from complaintlens.pipeline.base import Context
+from complaintlens.pipeline import injection
+from complaintlens.pipeline.base import Context, stage
 from complaintlens.pipeline.understand import Analysis
 from complaintlens.rag.knowledge import Hit, KnowledgeBase
 from complaintlens.rag.retrieval import BM25Retriever, Retriever, search_with_summary
@@ -87,11 +89,20 @@ def priority(analysis: Analysis, money_involved: bool) -> tuple[int, dict[str, i
 
 # --- verification ------------------------------------------------------------------------------
 
-_NUMBER = re.compile(r"(?<![\w-])\d+(?:[.,]\d+)?(?![\w-])")
+_NUMBER = re.compile(r"(?<!\w)\d+(?:[.,]\d+)?(?!\w)")
 _CITATION = re.compile(r"\[((?:HC-[A-Z]+#\d+)|(?:F\d+))\]")
+# Ride IDs and ticket numbers (LG-40029, LG-000042) are names, not quantities.
+_REFERENCE = re.compile(r"\bLG-?\d{4,6}\b", re.IGNORECASE)
+_ISO_DAY = re.compile(r"\b\d{4}-\d{2}-(\d{2})\b")  # the day of a date written 2026-11-06
+# The hyphens and dashes that models and keyboards produce instead of "-" (U+2010 to U+2015 and
+# the minus sign U+2212). Read as "-", a ride ID stays a ride ID and "5-10 days" a range.
+_DASHES = dict.fromkeys([*range(0x2010, 0x2016), 0x2212], "-")
 
 
 def _numbers(text: str) -> set[float]:
+    """The quantities stated in a text. A range such as "5-10 days" is two quantities; ride IDs,
+    ticket numbers and dates written 2026-11-06 are none (dates are checked separately)."""
+    text = _ISO_DAY.sub(" ", _REFERENCE.sub(" ", text.translate(_DASHES)))
     return {float(n.replace(",", ".")) for n in _NUMBER.findall(text)}
 
 
@@ -105,7 +116,8 @@ def verify(draft: Draft, hits: list[Hit], facts: list[dict[str, str]]) -> dict[s
     presentation weakness, not a hallucination, so it does not block the reply on its own.
     """
     sources = {h.chunk.id: h.chunk.indexed_text for h in hits} | {f["id"]: f["text"] for f in facts}
-    cited = set(draft.citations) | set(_CITATION.findall(draft.reply))
+    reply = draft.reply.translate(_DASHES)
+    cited = set(draft.citations) | set(_CITATION.findall(reply))
     unknown = sorted(c for c in cited if c not in sources)
     available: set[float] = set()
     for text in sources.values():
@@ -113,14 +125,15 @@ def verify(draft: Draft, hits: list[Hit], facts: list[dict[str, str]]) -> dict[s
     # Sentence level: a sentence that cites sources must take its numbers from THOSE sources (so a
     # wrong number cannot hide behind an unrelated section); an uncited sentence must at least use
     # numbers present somewhere in the sources, and lowers the citation coverage.
-    # Dates ("9 novembre", "Nov 9") are checked against the dates of the customer's record, not
-    # against policy numbers: a day number is a date, not an amount.
+    # Dates ("9 novembre", "Nov 9", "2026-11-09") are checked against the dates of the customer's
+    # record, not against policy numbers: a day number is a date, not an amount.
     fact_days = {float(d) for f in facts for d in _ISO_DAY.findall(f["text"])}
     claimed: set[float] = set()
     unsupported: set[float] = set()
     covered = 0
-    for sentence in _sentences(draft.reply):
+    for sentence in _sentences(reply):
         days = {float(d) for pair in _DATE_MENTION.findall(sentence) for d in pair if d}
+        days |= {float(d) for d in _ISO_DAY.findall(sentence)}
         unsupported |= {d for d in days if d not in fact_days}
         claimed |= days
         numbers = _numbers(_DATE_MENTION.sub(" ", _CITATION.sub("", sentence)))
@@ -134,7 +147,7 @@ def verify(draft: Draft, hits: list[Hit], facts: list[dict[str, str]]) -> dict[s
         else:
             allowed = available
         unsupported |= {n for n in numbers if n not in allowed}
-    with_numbers = sum(1 for s in _sentences(draft.reply) if _numbers(_CITATION.sub("", s)))
+    with_numbers = sum(1 for s in _sentences(reply) if _numbers(_CITATION.sub("", s)))
     return {
         "supported": not unknown and not unsupported,
         "citations": sorted(cited),
@@ -154,7 +167,6 @@ _MONTHS = (
 _DATE_MENTION = re.compile(
     rf"\b(\d{{1,2}})(?:er)?\s+(?:{_MONTHS})\b|\b(?:{_MONTHS})\.?\s+(\d{{1,2}})\b", re.IGNORECASE
 )
-_ISO_DAY = re.compile(r"\b\d{4}-\d{2}-(\d{2})\b")
 
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+(?=[^\[])|\n+")
 
@@ -308,7 +320,8 @@ def draft_reply(
         f"5. Write in {language}, warm and concise (max 130 words), greet the customer (by name "
         "only if a name is given; never invent one), "
         f"sign as '{company} Support'. Do not mention internal fact IDs except as citations.\n"
-        "6. Placeholders like [EMAIL_1] are masked personal data: never repeat or guess them.\n"
+        "6. Placeholders like [EMAIL_1] are masked personal data: never repeat or guess them."
+        f"{injection.rule()}\n"
         "Return ONLY JSON: {reply, citations (list of IDs used), proposed_action (none|refund|"
         "credit|waive_fee|investigate|ask_information), action_amount (number or null), "
         "confidence (0-1: how sure you are the reply fully and correctly resolves the message)}."
@@ -316,12 +329,13 @@ def draft_reply(
     user = (
         f"Customer name: {name or '(unknown: greet without a name)'}\n"
         f"Analysis: {analysis.summary} Goal: {analysis.customer_goal}\n"
-        f"Customer message:\n<<<\n{text}\n>>>\n\n"
+        f"Customer message:\n<<<\n{injection.quoted(text)}\n>>>\n\n"
         f"SOURCES:\n{_sources_block(hits, facts, about_ride)}"
     )
     if history and len(history) > 1:  # a follow-up: answer the latest message, in context
         said = "\n".join(
-            f"{'Customer' if h['from'] == 'customer' else company}: {h['text']}" for h in history
+            f"{'Customer' if h['from'] == 'customer' else company}: {injection.quoted(h['text'])}"
+            for h in history
         )
         user += (
             f"\n\nCONVERSATION SO FAR (oldest first):\n<<<\n{said}\n>>>\n"
@@ -336,6 +350,7 @@ def draft_reply(
 # --- the stage ---------------------------------------------------------------------------------
 
 
+@stage("respond")
 def respond_stage(ctx: Context) -> StageResult:
     analysis: Analysis = ctx["analysis"]
     lang = ctx.get("language", "en")
@@ -349,15 +364,18 @@ def respond_stage(ctx: Context) -> StageResult:
     hits: list[Hit] = []
     message: str | None = None
     kind = "answer"
+    # The message gives orders to the AI (injection.py): a person must see it. It is never
+    # answered automatically, and never dropped as spam on the LLM's word.
+    injected = bool(ctx.get("injection_signals"))
 
     if lang == "other":
         action, kind = Action.AWAITING_APPROVAL, "acknowledgement"
         message = render("unsupported_language", "en", ticket=ticket_no)
         reasons.append("unsupported language")
-    elif analysis.message_type == MessageType.SPAM:
+    elif analysis.message_type == MessageType.SPAM and not injected:
         action = Action.NO_REPLY
         reasons.append("spam or irrelevant")
-    elif not analysis.response_required:
+    elif not analysis.response_required and not injected:
         action = Action.NO_REPLY
         reasons.append("no response required (e.g. venting with nothing actionable)")
     elif set(analysis.risk_flags) & ESCALATION_FLAGS or analysis.severity == 4:
@@ -380,9 +398,10 @@ def respond_stage(ctx: Context) -> StageResult:
     else:
         kb: KnowledgeBase = ctx["kb"]
         retriever: Retriever = ctx.get("retriever") or BM25Retriever(kb)
-        # Customer's words (their language) fused with the LLM's English summary (same sections,
-        # mapped back to their language): MRR 0.65 vs 0.60 on the 62 development questions
-        # (reports/results/retrieval_summary.json). Without an LLM, the text alone is used.
+        # Searched with the LLM's one-sentence English summary (the same sections, returned in
+        # the customer's language): the right section is among the 4 for 82% of the development
+        # questions, against 69% with the customer's own words (retrieval_summary_int8.json).
+        # Without an LLM, the customer's words are used.
         llm_summary = analysis.summary if ctx.get("llm") else None
         hits = search_with_summary(
             retriever, kb, ctx["text_masked"], llm_summary, lang if lang in ("en", "fr") else "en"
@@ -414,7 +433,12 @@ def respond_stage(ctx: Context) -> StageResult:
             )
             verification = verify(draft, hits, facts)
             message = draft.reply
-            if draft.proposed_action in MONEY_ACTIONS:
+            if injected:
+                action = Action.AWAITING_APPROVAL
+                reasons.append(
+                    "the message contains instructions aimed at the AI: an agent checks the reply"
+                )
+            elif draft.proposed_action in MONEY_ACTIONS:
                 action = Action.AWAITING_APPROVAL
                 amount = f" ({draft.action_amount:.2f})" if draft.action_amount else ""
                 reasons.append(f"money involved: {draft.proposed_action}{amount} needs approval")
@@ -464,6 +488,3 @@ def respond_stage(ctx: Context) -> StageResult:
         },
         confidence=draft.confidence if draft else None,
     )
-
-
-respond_stage.stage_name = "respond"  # type: ignore[attr-defined]

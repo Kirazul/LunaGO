@@ -25,7 +25,8 @@ import joblib
 from pydantic import BaseModel, Field
 
 from complaintlens.llm import ChatClient, complete_json
-from complaintlens.pipeline.base import Context
+from complaintlens.pipeline import injection
+from complaintlens.pipeline.base import Context, stage
 from complaintlens.schemas import Category, MessageType, RiskFlag, StageResult, Urgency
 from complaintlens.settings import ROOT, get_settings
 
@@ -135,12 +136,15 @@ def _system_prompt() -> str:
         "(negative|neutral|positive), entities (list of {type, text}; types: DATE_TIME, MONEY, "
         "LOCATION, TRIP_REF, DRIVER_REF, PAYMENT_REF; text copied exactly from the message), "
         "summary (one neutral English sentence), customer_goal (English). Placeholders like "
-        "[EMAIL_1] are masked personal data: never try to guess them."
+        "[EMAIL_1] are masked personal data: never try to guess them." + injection.rule()
     )
 
 
 def analyse_with_llm(client: ChatClient, text: str) -> Analysis:
-    return complete_json(client, _system_prompt(), f"Customer message:\n<<<\n{text}\n>>>", Analysis)
+    message = injection.quoted(text)  # the text cannot close its own quotation
+    return complete_json(
+        client, _system_prompt(), f"Customer message:\n<<<\n{message}\n>>>", Analysis
+    )
 
 
 def _excerpt(text: str, limit: int = 140) -> str:
@@ -164,8 +168,11 @@ def fallback_analysis(text: str, p_complaint: float | None, severity: int | None
     )
 
 
+@stage("understand")
 def understand_stage(ctx: Context) -> StageResult:
     text = ctx["text_masked"]
+    # Decided before the LLM reads the message: wording that gives orders to the AI.
+    signals = ctx["injection_signals"] = injection.injection_signals(text)
     classical: dict[str, object] = {}
     p_complaint: float | None = None
     sev_classical: int | None = None
@@ -209,10 +216,8 @@ def understand_stage(ctx: Context) -> StageResult:
             "source": source,
             "classical": classical,
             "lexicon_flags_added": [f.value for f in added],
+            "injection_signals": signals,
         },
         confidence=round(p_complaint, 3) if p_complaint is not None else None,
         note=disagreement,
     )
-
-
-understand_stage.stage_name = "understand"  # type: ignore[attr-defined]
