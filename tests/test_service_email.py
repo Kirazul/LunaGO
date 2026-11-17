@@ -1,5 +1,6 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from email.message import EmailMessage
+from email.utils import format_datetime
 
 import pytest
 from imap_tools import MailMessage
@@ -27,6 +28,10 @@ ANALYSIS = {
     "customer_goal": "Refund of the duplicate charge.",
 }
 
+# A recent date: the Date header is only trusted when it is close to now (see `received_time`),
+# so a fixed date would make this test fail a week later.
+SENT_AT = (datetime.now(UTC) - timedelta(hours=1)).replace(microsecond=0)
+
 
 def raw_email(**headers) -> MailMessage:
     m = EmailMessage()
@@ -34,7 +39,7 @@ def raw_email(**headers) -> MailMessage:
     m["To"] = "lunago.support@gmail.com"
     m["Subject"] = "Facturé deux fois"
     m["Message-ID"] = "<abc123@univ.tn>"
-    m["Date"] = "Sat, 07 Nov 2026 20:15:00 +0000"
+    m["Date"] = format_datetime(SENT_AT)
     for k, v in headers.items():
         m[k.replace("_", "-")] = v
     m.set_content(
@@ -48,7 +53,7 @@ def test_email_is_converted_with_threading_headers():
     msg = to_inbound(raw_email())
     assert msg.sender == "prof@univ.tn" and msg.sender_name == "Prof Omheni"
     assert msg.external_id == "<abc123@univ.tn>"
-    assert msg.received_at == datetime(2026, 11, 7, 20, 15, tzinfo=UTC)
+    assert msg.received_at == SENT_AT
 
 
 def test_automatic_replies_are_detected_to_avoid_mail_loops():

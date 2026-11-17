@@ -44,6 +44,8 @@ def test_customer_can_track_only_with_the_secret_key(client):
     assert body["status"] == "needs_info"
     assert [p["done"] for p in body["phases"]] == [True, True, True, False]
     assert "analysis" not in body and "sender" not in body  # no internals for customers
+    # Times carry their zone (UTC): without it the browser would read them as local time.
+    assert body["received_at"].endswith(("Z", "+00:00"))
     wrong = client.get(f"/api/public/tickets/{ticket['id']}", params={"k": "guess"})
     assert wrong.status_code == 404
 

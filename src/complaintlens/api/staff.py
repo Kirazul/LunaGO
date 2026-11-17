@@ -188,6 +188,17 @@ def _summary(t: Ticket, messages: int = 1) -> dict[str, Any]:
     }
 
 
+def _customer(c: Customer) -> dict[str, Any]:
+    """What agents see of a customer: chosen fields only, never the password hash."""
+    return {
+        "id": c.id,
+        "name": c.name,
+        "contact": c.contact,
+        "language": c.language,
+        "has_account": bool(c.password_hash),
+    }
+
+
 @router.get("/tickets", dependencies=signed_in)
 def list_tickets(limit: int = 200) -> list[dict[str, Any]]:
     """Most recent activity first."""
@@ -229,7 +240,7 @@ def get_ticket(ticket_id: int) -> dict[str, Any]:
             "stages": [r.model_dump() for r in stages],
             "thread": conversation,
             "draft": draft.model_dump() if draft else None,
-            "customer": customer.model_dump() if customer else None,
+            "customer": _customer(customer) if customer else None,
             "trip": trip.model_dump() if trip else None,
         }
 

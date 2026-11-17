@@ -128,3 +128,16 @@ def test_acknowledgement_names_the_ride_it_checked(client):
     ).json()
     view = client.get(f"/api/public/tickets/{r['id']}", params={"k": r["track_key"]}).json()
     assert f"found ride {ride}" in view["messages"][-1]["body"]
+
+
+def test_the_console_never_receives_a_customers_password_hash(client, staff):
+    # Regression: the ticket view returned the whole customer row, password hash included.
+    signup(client)
+    sent = client.post(
+        "/api/messages", json={"email": "sam@example.com", "body": "How do refunds work?"}
+    ).json()
+    view = client.get(f"/api/tickets/{sent['id']}", headers=staff)
+    assert view.status_code == 200
+    assert set(view.json()["customer"]) == {"id", "name", "contact", "language", "has_account"}
+    assert view.json()["customer"]["has_account"] is True
+    assert "password_hash" not in view.text and "scrypt$" not in view.text

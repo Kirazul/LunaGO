@@ -14,7 +14,7 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlmodel import select
 
 from complaintlens.api.state import state
-from complaintlens.schemas import Channel, InboundMessage
+from complaintlens.schemas import Channel, InboundMessage, as_utc
 from complaintlens.security import client_ip
 from complaintlens.service import thread
 from complaintlens.settings import get_settings
@@ -106,7 +106,7 @@ def public_ticket(ticket_id: int, k: str) -> dict[str, Any]:
             "number": t.number,
             "status": t.status,
             "language": t.language,
-            "received_at": t.received_at,
+            "received_at": as_utc(t.received_at),
             "phases": [{"name": p, "done": p in reached} for p in PHASES],
             "messages": thread(s, t, for_customer=True),
         }
