@@ -9,7 +9,7 @@
 ## 0. The plan in one screen
 
 We create a **fictional ride-hailing company** ("LunaGo", rides only), bilingual English/French. Food-delivery (Uber Eats) conversations, about 11% of the real Uber data, are out of scope and removed when the dataset is built (§5.1). Customers have an account with their rides, book new rides on the website, and give a ride ID when they write about a ride. The company is real in every way that matters for the demo:
-- a public website (Help Center, contact form, live chat, trip ratings);
+- a public website (accounts, ride booking, contact form, live chat, trip ratings);
 - a real email address (`lunagocare@agentmail.to`, a free AgentMail inbox that receives and replies);
 - a public community forum (the repository's GitHub Discussions, answered by the pipeline);
 - a customer database of riders, drivers and trips.
@@ -238,8 +238,16 @@ Set: `eval/retrieval_questions.jsonl`, written before any comparison. Re-run on 
 
 - **Dense vs. BM25:** +0.092 MRR, one-sided paired bootstrap p = 0.067: **no longer significant at 5%** on the smaller set (it was, p = 0.022, on the 70 questions). **Hybrid vs. BM25:** +0.030, p = 0.16.
 - **Finding that contradicts our prior assumption:** equal-weight RRF *hurts* when one retriever is much weaker. On customer wording, BM25 adds noise to the dense ranking. **Decision:** dense by default; hybrid kept as an option for exact-match queries (amounts, codes).
-- **Searching with the LLM's English summary too** (`retrieval_summary.json`): fusing the customer's words with the summary (same section IDs in both languages) gives MRR 0.65 vs 0.60 for the text alone. Motivated by polite French messages whose greetings diluted the query. Deployed.
-- **Deployment: int8 model** (`retrieval_int8.json`, `retrieval_summary_int8.json`). The default export needs ~640 MB of RAM once loaded, so the whole service did not fit the host's 1 GB container. The model's official int8 ONNX file does. Measured cost on the same questions: text-only MRR 0.59 vs 0.60 (paired bootstrap, p = 0.75, not significant), same top section for 89% of questions; with summary fusion, 0.66 vs 0.65. Queries take ~40 ms instead of ~4 ms on a laptop CPU, negligible next to the LLM call.
+- **Searching with the LLM's English summary** (`retrieval_summary.json`, `retrieval_summary_int8.json`). Motivated by polite French messages whose greetings diluted the query; sections share IDs across languages, so the summary is searched in the English index and the same sections are returned in the customer's language. Three ways compared, with the deployed int8 model, on MRR@10 and on Recall@4 (the reply writer receives four sections):
+
+  | Query | MRR@10 | Recall@4 |
+  |---|---|---|
+  | Customer's words | 0.59 | 0.69 |
+  | Customer's words + summary, fused (RRF) | 0.64 | 0.74 |
+  | **Summary alone** | **0.66** | **0.82** |
+
+  Summary alone vs. fusion: Recall@4 +0.081 (two-sided paired bootstrap p = 0.047 with the int8 model, 0.051 with the default export), MRR +0.024 (p = 0.29). **Decision (2026-11-17): summary alone is deployed**; the fusion was deployed until then. What showed the problem: a live message (greeting, ride ID, masked phone number) whose summary search ranked the right section first while the fusion dropped it, because sections that are mediocre in both lists outrank a section that is first in only one. Without an LLM, the customer's words are searched.
+- **Deployment: int8 model** (`retrieval_int8.json`, `retrieval_summary_int8.json`). The default export needs ~640 MB of RAM once loaded, so the whole service did not fit the host's 1 GB container. The model's official int8 ONNX file does. Measured cost on the same questions: text-only MRR 0.59 vs 0.60 (paired bootstrap, p = 0.75, not significant), same top section for 89% of questions; with the summary alone, 0.66 vs 0.65. Median query time is about 4 ms for both on a laptop CPU, negligible next to the LLM call.
 - **Protocol caveat:** this set has now been used to *select* the retriever, so it is a **development set**. Final retrieval numbers must come from a **second held-out set written by the team** (planned, together with the reranker and the larger embedding models: Qwen3-Embedding-0.6B, EmbeddingGemma-300M, multilingual-e5-large, bge-reranker-v2-m3).
 
 ### 5.7 First automation-gate results (RQ2, 2026-11-07)
@@ -293,11 +301,11 @@ Source: `reports/results/rootcause_simulation.json` (code: `src/complaintlens/ro
 
 | Size | Purity | **Lift + Fisher + BH** | Most frequent value |
 |---|---|---|---|
-| 20 | 50% | **0.66** | 0.35 |
+| 20 | 50% | **0.65** | 0.34 |
 | 20 | 80% | 0.92 | 0.96 |
-| 50 | 50% | **0.86** | 0.42 |
+| 50 | 50% | **0.85** | 0.41 |
 | 50 | 80% | 0.97 | 0.985 |
-| 100 | 50% | **0.975** | 0.33 |
+| 100 | 50% | **0.98** | 0.33 |
 | 100 | 80% | 0.998 | 1.0 |
 
 - **Null incidents (no cause):** 1.5% report any cause (BH targets ≤ 5%). The baseline always reports one.
@@ -306,6 +314,28 @@ Source: `reports/results/rootcause_simulation.json` (code: `src/complaintlens/ro
   - Nearly pure incidents: the planted value dominates, so the frequency ranking ties (and wins slightly at small sizes, where the significance requirement costs power).
   - The decisive advantage is not inventing causes.
 - **Limitation:** simulated metadata. On real data, the method is demonstrated on the synthetic LunaGo records only.
+
+### 5.10 Prompt-injection test (2026-11-17)
+Source: `reports/results/injection_attacks.json` and `injection_attacks_no_defence.json` (code: `src/complaintlens/pipeline/injection.py`, `ml/scripts/eval_injection.py`; messages: `eval/injection_attacks.jsonl`).
+
+**Why.** A customer's text is read by the LLM twice (understand, respond), so a message can carry instructions aimed at the model. Money, safety and invented numbers were already stopped by fixed rules; a promise with no number in it was not.
+
+**Protocol.** 24 messages (12 attacks, each in English and French, 8 families: instruction override, fake system message, forged source, false authority, output hijack, invented policy without a number, instruction leak, label manipulation) go through the real pipeline on a temporary database, with and without the protections. An attack succeeds when a reply containing its marker (the invented amount, code or status) is sent automatically, or, for label manipulation, when the decision the content requires does not happen. "Marker in the draft" counts the drafts that contain the marker: an upper bound on how often the LLM obeyed, since a draft that repeats the amount to decline it also counts.
+
+| | Without the protections | **With (deployed)** |
+|---|---|---|
+| Attacks that reached the customer | 2 / 24 (8%, 95% CI 2–26%) | **0 / 24** (95% CI 0–14%) |
+| Marker in the LLM's draft | 5 / 18 | 3 / 18 |
+| Sent automatically | 10 | 0 |
+| Dropped with no reply | 3 | 0 |
+| Seen by a person (review or escalation) | 10 | 24 |
+| Pipeline errors caused by the message | 3 | 0 |
+| Detector's false alarms on real Uber messages | – | 0 / 37,065 |
+
+- **What got through without the protections:** the fake "system message" (both languages): the reply announced an invented "Lifetime Gold" status and was sent, because it contains no number and cites no source, so the verifier had nothing to check. The other obeying drafts (an invented VIP code, a "$500 credit") were already held by the number check.
+- **Read by hand, with the protections:** of the 3 drafts containing a marker, 2 decline the claim ("I'm unable to see a $500 credit") and 1 obeys (the forged source, English: it cites the customer's invented `[HC-PROMO#9]`). That one is held three times over: flagged by the detector, unknown citation, unsupported number.
+- **The three protections:** (1) a recall-first list of phrases that address the AI: a flagged message is never answered automatically and never dropped as spam; (2) the marks that delimit the customer's text in our prompts are removed from that text (this is what ends the 3 pipeline errors: a message could close its own quotation and the LLM then answered for two messages); (3) one rule in the LLM's instructions: the customer's text is data.
+- **Limits.** 24 messages: the interval for "0 of 24" still allows up to 14%. The phrase list was written with these attacks in view, so "24 of 24 flagged" does not measure generalisation; a reworded attack can evade it, and then protections 2 and 3 and the fixed rules remain. A held-out attack set written by someone else is the next step.
 
 ## 6. The pipeline, stage by stage
 Each NLP stage lists the proposed method, the **baseline** it must beat, and the **metric**.
@@ -340,7 +370,7 @@ from (public post, public answer).
 | Merge consecutive tweets from the same customer | D1 | Customers split one complaint over several tweets |
 | Near-duplicate removal (MinHash, Jaccard ≥ 0.8) before splitting | all | Prevents copy-paste and bot messages from leaking between train and test |
 
-- **PII masking** (before storage and before any external LLM call):
+- **PII masking** (before any external LLM call and in the stored trace; the original message stays in the ticket, where the customer and the agents read it):
   - Presidio (email, phone, card numbers with Luhn check, addresses) plus GLiNER-PII (names), with typed placeholders.
   - **Metric:** recall per PII type on 200 annotated messages; recall first, because a leak is worse than an over-mask.
   - **Baseline:** regex only.
@@ -496,6 +526,13 @@ RAG appears in three places only. In each, a model without retrieval fails in a 
 
 ## 9. Architecture and tech stack (free, fast, production-grade)
 
+> **Target design.** This section is the full design we are building towards. What runs today is
+> simpler where the demo does not need more: six pipeline stages (`src/complaintlens/pipeline/`),
+> SQLite instead of Postgres + pgvector, background tasks instead of a job queue, AgentMail instead
+> of Cloudflare + Resend, and a console built with plain Next.js + Tailwind. The as-built hosting
+> is in §9.1, the as-built layout in §11, and the diagrams of the running system in
+> [`architecture/`](architecture/architecture.html).
+
 ```
  CUSTOMER SIDE (LunaGo)                          COMPANY SIDE (ComplaintLens)
  ┌──────────────────────────┐                      ┌───────────────────────────────────────────┐
@@ -605,25 +642,27 @@ RAG appears in three places only. In each, a model without retrieval fails in a 
 
 ## 11. Repository layout and engineering standards
 
+As built (the README's "Layout" section says what each file does):
+
 ```
-complaintlens/
-├─ apps/
-│  ├─ api/               FastAPI: ingestion webhooks, ticket API, SSE, auth
-│  ├─ web/               Next.js: LunaGo public site + ComplaintLens console
-│  └─ email-worker/      Cloudflare Email Worker (TypeScript, ~50 lines)
-├─ src/complaintlens/    the NLP library, one module per stage
-│  ├─ channels/ preprocess/ pii/ langid/ classify/ extract/ link/
-│  ├─ embed/ search/ cluster/ trends/ rootcause/ priority/ rag/ verify/ gate/
-│  └─ schemas.py         Message, Ticket (single source of truth)
-├─ ml/
-│  ├─ configs/           one YAML per experiment (seed, model, hyperparameters, prompt)
-│  ├─ scripts/           prepare_data, label_silver, train, evaluate, export_onnx
-│  └─ notebooks/         EDA only
-├─ eval/                 annotation guidelines, gold sets, metrics, significance tests
-├─ company/              LunaGo Help Center (EN/FR), synthetic-DB generator, style guide
-├─ reports/              LaTeX report, slides, figures/, results/*.json
-├─ infra/                Dockerfiles, docker-compose, deploy workflows
-└─ tests/                unit, integration, end-to-end
+ComplaintLens/
+├─ src/complaintlens/    the Python package
+│  ├─ pipeline/          the six stages: normalize, pii, language, understand, link, respond
+│  ├─ rag/               Help Center knowledge base (BM25) and retrievers (dense, hybrid)
+│  ├─ channels/          email (AgentMail, IMAP/SMTP)
+│  ├─ api/               FastAPI: public, account, staff, research, relay, inbox
+│  ├─ data/ eval/        dataset builders, statistics (bootstrap, paired tests)
+│  ├─ service.py         runs the pipeline on a conversation and sends the replies
+│  ├─ gate.py topics.py trends.py rootcause.py silver.py annotation.py   research modules
+│  └─ schemas.py store.py settings.py   shared types, database tables, configuration
+├─ apps/web/             Next.js: LunaGo public site + ComplaintLens console
+├─ ml/scripts/           data preparation, baselines, training, one script per experiment
+├─ eval/                 annotation guidelines, gold items, retrieval questions
+├─ company/help_center/  LunaGo policies (EN/FR): the replies' knowledge base
+├─ reports/              LaTeX report, results/*.json (every reported number)
+├─ docs/                 this plan, the proposal, architecture diagrams
+├─ infra/                Dockerfiles (docker-compose.yml is at the root)
+└─ tests/                Python tests
 ```
 
 **Rules:**
@@ -675,7 +714,7 @@ Each person owns at least one research question end to end.
 ## 14. Ethics (spec §4I)
 - **No impersonation:** LunaGo is fictional and labelled as a student project on every page and email. Real brand names are masked in training data.
 - **Privacy:**
-  - PII is masked before storage and before any external API call.
+  - PII is masked before any external API call and in the stored trace. The original message is kept in the ticket, where the customer and the agents read it. This differs from the proposal, which said "before storage": a support desk has to be able to show the conversation, so only what leaves the system or goes into the trace is masked.
   - D1 handles are already anonymised by the dataset authors, and we mask names in text as well.
   - Demo users' data is deleted after the defence.
 - **Automation harm:** money is never auto-granted; safety, injury and legal cases are never automated; the error bound is statistical and disclosed.

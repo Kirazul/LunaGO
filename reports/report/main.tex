@@ -31,8 +31,8 @@ evaluate on real data (expert-labelled complaint tweets, 37{,}065 real Uber ride
 and deploy the system as the live support desk of a fictional ride-hailing company.
 A TF-IDF baseline already exceeds every published non-neural result on complaint identification
 (macro-F1 81.5 vs.\ 79.0); on customer-worded queries, dense multilingual retrieval ranks above
-BM25 (MRR 0.60 vs.\ 0.50, $p=0.07$, not significant on 62 questions) and reaches 0.65 when it also
-searches with the LLM's summary; a rate-based burst detector
+BM25 (MRR 0.60 vs.\ 0.50, $p=0.07$, not significant on 62 questions) and reaches 0.65 when it searches
+with the LLM's one-sentence summary of the message instead; a rate-based burst detector
 recovers 96\% of injected 20-message bursts where a count threshold recovers none, and flags a real
 app outage within its first hour; and a Learn-then-Test gate automates 37\% of messages at a
 guaranteed 10\% error bound, refusing to automate when the evidence cannot support a stricter bound.
@@ -116,7 +116,9 @@ labels on all 3{,}449 rows; we align by position and verify each pair by text si
 stripping for neural models (negation and casing carry meaning; pretrained tokenisers are used as
 is). Brand names and handles are masked (\texttt{[COMPANY]}, \texttt{[USER]}) so that models learn
 the complaint, not the brand. Consecutive tweets of one customer are merged. Email quotes and
-signatures are removed. Personal data is masked before storage and before any external API call.
+signatures are removed. Personal data (email addresses, phone and card numbers) is masked before
+any external API call and in the stored trace; the original message stays in the ticket, where the
+customer and the agents read it.
 Duplicates are grouped so that they never cross train/test boundaries.
 
 \section{System and methods}
@@ -193,11 +195,18 @@ Hybrid BM25 + dense (RRF) & 0.39 & 0.63 & 0.53 [0.43, 0.63] & 4 ms \\
 BM25: $+0.092$ MRR, one-sided paired bootstrap $p=0.067$ (not significant at 5\%); hybrid vs.\
 BM25: $+0.030$, $p=0.16$. Source: \res{retrieval\_helpcenter.json}.}
 \end{table}
-Equal-weight fusion \emph{hurt} because BM25 is much weaker on customer wording. Searching with the
-LLM's one-line English summary as well (sections share IDs across languages) raised MRR to 0.65
-(\res{retrieval\_summary.json}). To fit the free host's 1\,GB container we deploy the model's
-official int8 file: MRR 0.59 vs.\ 0.60 on the text alone (paired bootstrap $p=0.75$), same top
-section for 89\% of questions, 0.66 with the summary (\res{retrieval\_int8.json}). This set was
+Equal-weight fusion \emph{hurt} because BM25 is much weaker on customer wording. Customers' messages
+carry greetings, ride IDs and masked placeholders that dilute a dense query, so we search with the
+LLM's one-sentence English summary of the message instead (sections share IDs across languages):
+MRR 0.65 against 0.60 for the customer's words (\res{retrieval\_summary.json}). The reply writer
+receives four sections, so Recall@4 is the measure that matters: with the deployed model, 0.82 for
+the summary alone, 0.74 when the two rankings are fused with RRF, 0.69 for the customer's words
+(summary vs.\ fusion: $+0.081$, two-sided paired bootstrap $p=0.047$;
+\res{retrieval\_summary\_int8.json}). Fusion loses because a section ranked first by one query
+and absent from the other's top ten is outranked by sections that are mediocre in both. To fit the
+free host's 1\,GB container we deploy the model's official int8 file: MRR 0.59 vs.\ 0.60 on the
+text alone (paired bootstrap $p=0.75$), same top section for 89\% of questions
+(\res{retrieval\_int8.json}). This set was
 used to choose the retriever, so it is a development set; \todo{final numbers on the held-out
 question set written by the team; reranker; larger embedding models}.
 
@@ -282,6 +291,23 @@ A guarantee costs evidence: with this calibration size and model, $\leq 5\%$ can
 the gate refuses rather than pretends. \todo{automation rate vs.\ calibration size; with the
 fine-tuned encoder and the gold sets}.
 
+\subsection{Robustness to instructions hidden in a message}
+A customer's text is read by the LLM twice, so it can carry instructions aimed at the model
+(prompt injection). We sent 24 such messages (12 attacks in English and French, 8 families: instruction
+override, fake system message, forged source, false authority, output hijack, invented policy with
+no number, instruction leak, label manipulation) through the whole pipeline. An attack succeeds when
+a reply containing its marker is sent automatically or, for label manipulation, when the required
+decision does not happen. Without dedicated protections, 2 of 24 succeeded (8\%, Wilson 95\% CI
+2--26\%): a fake ``system message'' made the reply announce an invented loyalty status, which has no
+number and cites no source, so the verifier had nothing to check; 10 replies were sent
+automatically and 3 messages were dropped without a reply. With three protections (a recall-first
+list of phrases that address the AI, whose matches are never answered automatically nor dropped as
+spam; delimiters that the customer's text cannot close; one rule in the LLM's instructions), 0 of
+24 succeeded (CI 0--14\%), all 24 reached a person, and the phrase list flagged none of 37{,}065
+real Uber messages (\res{injection\_attacks.json}, \res{injection\_attacks\_no\_defence.json}).
+The phrase list was written with these attacks in view, so it does not measure generalisation;
+\todo{a held-out attack set written by a third party}.
+
 \subsection{Grounded replies (RQ3, generation part)}
 \todo{faithfulness, citation precision/recall, policy violations, blind human comparison with real
 agent replies ($\kappa$), LLM-judge validation, variance over 3 runs, cost and latency}.
@@ -304,7 +330,7 @@ are fictional, so reply-level results measure faithfulness to \emph{our} policie
 
 \section{Ethical considerations}
 The demo company is fictional and labelled as such on every page and email; no real brand is
-impersonated. Personal data is masked before storage and before any external call; demo data is
+impersonated. Personal data is masked before any external call and in the stored trace; demo data is
 deleted after the defence. Money is never granted automatically; safety, injury, harassment and
 legal cases always reach a human. Licences are respected (non-commercial, share-alike, no
 redistribution of the raw data). A risk of misuse (using triage to bury complaints) is mitigated by
